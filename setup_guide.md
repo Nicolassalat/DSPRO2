@@ -8,7 +8,7 @@ Download the ROM from: https://romsretro.com/mario-kart-wii-rom/ (but pssst... n
 
 ## Step 3: Clone the Git Repository
 ```
-git clone <repository-url>
+git clone https://github.com/Nicolassalat/DSPRO2/
 ```
 
 ## Step 4: Navigate into the Project Folder

@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Large files
+*.iso
+
+# Emulator files
+emulator/

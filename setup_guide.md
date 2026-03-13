@@ -28,7 +28,7 @@ uv sync
 
 ## Step 7: Download Emulator setup
 ```
-[Run `scripts/setup_emulator.py`](scripts/setup_emulator.py)
+Run `scripts/setup_emulator.py`
 ```
 
 ## Useful UV Commands

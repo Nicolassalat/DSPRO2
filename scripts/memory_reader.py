@@ -1,37 +1,32 @@
-# memory_reader.py
-# Mario Kart Wii - NTSC-U (RMCE01)
-# Confirmed across 3 sessions: base stable, lap offset varies → dynamic scan required
-
 from dolphin import memory
 
-STATIC_PTR = 0x8069FDB4          # always points to 0x80E44BF0
-LAP_SCAN_RANGE = (0x100, 0x300)  # lap offset found in this range each session
+# PAL (RMCP01) static pointers
+_RACE_INFO_PTR  = 0x809BD730
+_STAGE_INFO_PTR = 0x809C18F8
 
-_base = None
-_lap_offset = None
-
-def _find_lap_offset(base):
-    for off in range(LAP_SCAN_RANGE[0], LAP_SCAN_RANGE[1], 4):
-        try:
-            val = memory.read_f32(base + off)
-            if 1.0 <= val <= 3.5:
-                return off
-        except:
-            pass
-    return None
+_race_base  = None
+_stage_base = None
 
 def init():
-    """Call once at race start to lock in the lap offset for this session."""
-    global _base, _lap_offset
-    _base = memory.read_u32(STATIC_PTR)
-    _lap_offset = _find_lap_offset(_base)
-    if _lap_offset is None:
-        raise RuntimeError("Could not find lap offset — is a race running?")
-    print(f"[memory] base=0x{_base:08X} lap_offset=0x{_lap_offset:X}")
+    global _race_base, _stage_base
+    _race_base  = memory.read_u32(_RACE_INFO_PTR)
+    _stage_base = memory.read_u32(_STAGE_INFO_PTR)
+    print(f"[memory] race_base=0x{_race_base:08X} stage_base=0x{_stage_base:08X}")
 
 def read_lap() -> float:
-    """Returns current lap completion (1.0 = start, ~4.0 = finish)."""
-    return memory.read_f32(_base + _lap_offset)
+    """1.0 at race start, ~4.0 at finish (3-lap race)."""
+    return memory.read_f32(_race_base + 0xF8)
+
+def read_max_lap() -> float:
+    """Highest lap completion reached — never decreases."""
+    return memory.read_f32(_race_base + 0xFC)
+
+def read_stage() -> int:
+    """0 = intro camera, 1 = countdown, 2 = racing."""
+    return memory.read_u8(_stage_base + 0x2B)
+
+def is_racing() -> bool:
+    return read_stage() == 2
 
 def is_initialized() -> bool:
-    return _lap_offset is not None
+    return _race_base is not None

@@ -24,8 +24,12 @@ uv sync
 ## Step 6: Activate the Environment
 - **macOS/Linux:** `source .venv/bin/activate`
 - **Windows (cmd):** `.venv\Scripts\activate.bat`
-
 ---
+
+## Step 7: Download Emulator setup
+```
+Run scripts\setup_emulator.py
+```
 
 ## Useful UV Commands
 | Command | Description |

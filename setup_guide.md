@@ -5,6 +5,7 @@ Download and install UV from: https://docs.astral.sh/uv/#installation
 
 ## Step 2: Download Mario Kart Wii ROM
 Download the ROM from: https://romsretro.com/mario-kart-wii-rom/ (but pssst... not quite legal 🤫)
+and put in /game/mkw.iso
 
 ## Step 3: Clone the Git Repository
 ```
@@ -26,10 +27,12 @@ uv sync
 - **Windows (cmd):** `.venv\Scripts\activate.bat`
 ---
 
-## Step 7: Download Emulator setup
+## Step 7: Download Emulator setup (only windows for now)
 ```
 Run `scripts/setup_emulator.py`
 ```
+
+The emulator fork is not yet compiled for linux and must be built from source.
 
 ## Useful UV Commands
 | Command | Description |

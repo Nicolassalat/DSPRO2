@@ -15,5 +15,5 @@ wheels/
 # Emulator files
 emulator/
 
-# Meetup files
+# ToDo and question files
 *.txt

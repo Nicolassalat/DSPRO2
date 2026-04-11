@@ -2,6 +2,8 @@ from dolphin import event, memory
 
 frame_count = 0
 
+print("Hello, Mario Kart Wii!")
+
 @event.on_frameadvance
 def on_frame():
     global frame_count

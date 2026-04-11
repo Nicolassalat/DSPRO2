@@ -1,3 +1,4 @@
+# game_memory.py
 """
 Reads MKWii game state from RAM using the Dolphin scripting API.
 Only works for PAL (RMCP01). 

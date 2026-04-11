@@ -5,7 +5,7 @@ Download and install UV from: https://docs.astral.sh/uv/#installation
 
 ## Step 2: Download Mario Kart Wii ROM
 Download the ROM from: https://romsretro.com/mario-kart-wii-rom/ (but pssst... not quite legal 🤫)
-and put in /game/mkw.iso
+place at game/mkw.iso
 
 ## Step 3: Clone the Git Repository
 ```
@@ -14,7 +14,7 @@ git clone https://github.com/Nicolassalat/DSPRO2/
 
 ## Step 4: Navigate into the Project Folder
 ```
-cd <project-name>
+cd DSPRO2
 ```
 
 ## Step 5: Create the Virtual Environment and Install Dependencies
@@ -29,7 +29,7 @@ uv sync
 
 ## Step 7: Download Emulator setup (only windows for now)
 ```
-Run `scripts/setup_emulator.py`
+uv run scripts/setup_emulator.py
 ```
 
 The emulator fork is not yet compiled for linux and must be built from source.

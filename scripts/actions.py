@@ -1,3 +1,4 @@
+# actions.py
 """
 MKWii RL action space mapping.
 
@@ -80,10 +81,12 @@ ACTION_TABLE: list[Action] = [
     Action("brake_left",         b_button=True,  stick_x=STEER_LEFT),       # 12
     Action("brake_right",        b_button=True,  stick_x=STEER_RIGHT),      # 13
 
-    # Use Item (mostly for later, keeping disabled for pure driving training)
-    Action("item_center",        a_button=True,  l_button=True, stick_x=STEER_CENTER),  # 14
-    Action("item_left",          a_button=True,  l_button=True, stick_x=STEER_LEFT),    # 15
-    Action("item_right",         a_button=True,  l_button=True, stick_x=STEER_RIGHT),   # 16
+
+    # ── Use Item + Accel + Steer (3 levels) ──────────────────────────────
+    #Action("item_center",        a_button=True,  l_button=True, stick_x=STEER_CENTER),  # 14
+    #Action("item_left",          a_button=True,  l_button=True, stick_x=STEER_LEFT),    # 15
+    #Action("item_right",         a_button=True,  l_button=True, stick_x=STEER_RIGHT),   # 16
+
 
     # Do nothing
     Action("nothing"),                                                                  # 17

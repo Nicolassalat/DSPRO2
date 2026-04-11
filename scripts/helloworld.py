@@ -1,4 +1,4 @@
-from dolphin import event, memory
+from dolphin import event
 
 frame_count = 0
 

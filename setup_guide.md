@@ -27,10 +27,12 @@ uv sync
 - **Windows (cmd):** `.venv\Scripts\activate.bat`
 ---
 
-## Step 7: Download Emulator setup
+## Step 7: Download Emulator setup (only windows for now)
 ```
 uv run scripts/setup_emulator.py
 ```
+
+The emulator fork is not yet compiled for linux and must be built from source.
 
 ## Useful UV Commands
 | Command | Description |

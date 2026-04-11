@@ -3,7 +3,8 @@ import sys, os, socket, struct, json, random
 
 sys.path.insert(0, os.path.join(os.getcwd(), "scripts"))
 
-from dolphin import event, savestate, gui
+from dolphin import event, savestate
+#from dolphin import gui
 from game_memory import GameMemory
 from actions import ActionSpace
 
@@ -76,8 +77,9 @@ def on_frame():
         print(f"[DolphinEnv] Loaded save state: {SAVE_STATE}")
         return
 
-    if _last_snap1 and _last_snap2:
-        _draw_overlay(_last_snap1, _last_snap2, s1, s2)
+    # For debugging: draw an overlay with progress and status info
+    #if _last_snap1 and _last_snap2:
+    #    _draw_overlay(_last_snap1, _last_snap2, s1, s2)
 
     frame_counter += 1
     if frame_counter % FRAMESKIP != 0:

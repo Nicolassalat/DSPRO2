@@ -38,7 +38,6 @@ def on_frame_arrived(frame: Frame, capture_control: InternalCaptureControl):
     img = img.convert("L")
     img.save(f"{OUTPUT_DIR}/frame_{frame_count:08d}.png")
     print(f"Saved frame {frame_count}")
-    frame_count += 1
 
 @capture.event
 def on_closed():

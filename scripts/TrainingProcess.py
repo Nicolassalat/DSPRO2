@@ -41,14 +41,6 @@ def make_capture(player_id, retries=20, delay=1.0):
 
 def player_loop(player_id, conn):
     cap = make_capture(player_id)
-    current_frame = [None]
-
-    @cap.on_frame
-    def on_frame(img):
-        current_frame[0] = img
-
-    cap_thread = threading.Thread(target=cap.start, daemon=True)
-    cap_thread.start()
 
     while True:
         msg = recv_json(conn)
@@ -62,7 +54,7 @@ def player_loop(player_id, conn):
             continue
 
         snap  = msg["snapshot"]
-        frame = current_frame[0]
+        frame = cap()
         r = reward.reward_for_frame(snap, player_id)
         action_idx = agent.get_action(frame, player_id)
         send_action(conn, action_idx)

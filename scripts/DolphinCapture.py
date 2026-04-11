@@ -1,3 +1,4 @@
+# DolphinCapture.py
 from windows_capture import WindowsCapture, Frame, InternalCaptureControl
 import win32gui
 from PIL import Image

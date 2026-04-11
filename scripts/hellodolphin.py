@@ -1,3 +1,8 @@
+# hellodolphin.py
+
+'''
+how to talk to dolphin from a script running inside dolphin itself. this is just a test to make sure the event system works and we can print something every second.
+'''
 from dolphin import event
 
 frame_count = 0

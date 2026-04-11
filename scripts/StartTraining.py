@@ -42,7 +42,7 @@ print("[StartTraining] Launching Dolphin...")
 subprocess.Popen([
     DOLPHIN_EXE,
     "-e", ISO_PATH,
-    "--script", ENV_SCRIPT,f
+    "--script", ENV_SCRIPT,
 ])
 
 print("[StartTraining] All systems go.")

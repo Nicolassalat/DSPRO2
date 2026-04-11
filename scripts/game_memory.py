@@ -1,3 +1,4 @@
+# game_memory.py
 """
 GameMemory: reads all MKWii game state from RAM via Dolphin scripting API.
 PAL (RMCP01) only. All pointer chains confirmed working 2025-03-19.

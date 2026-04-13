@@ -1,21 +1,19 @@
-#TrainingProcess.py
+# TrainingProcess.py
 import socket, struct, json, threading, os, random, time
 from DolphinCapture import DolphinCapture
+from reward import compute_reward
 
-HOST      = "127.0.0.1"
-PORT_P1   = 55001
-PORT_P2   = 55002
+HOST       = "127.0.0.1"
+PORT_P1    = 55001
+PORT_P2    = 55002
 READY_FILE = os.path.join(os.getcwd(), "training_ready.txt")
+
 
 class agent:
     @staticmethod
     def get_action(frame, player_id):
         return random.randint(0, 13)
 
-class reward:
-    @staticmethod
-    def reward_for_frame(snapshot, player_id):
-        return 0.0
 
 def send_action(sock, action_idx):
     sock.sendall(struct.pack(">I", action_idx))
@@ -41,23 +39,36 @@ def make_capture(player_id, retries=20, delay=1.0):
 
 def player_loop(player_id, conn):
     cap = make_capture(player_id)
+    last_rc = 1.0    # race_completion starts at ~1.0
 
     while True:
         msg = recv_json(conn)
         if msg is None:
             break
+
         if msg.get("reset"):
+            last_rc = 1.0    # reset delta tracking on new episode
             print(f"[TrainingProcess] P{player_id} episode reset.")
             continue
+
         if msg.get("done"):
-            print(f"[TrainingProcess] P{player_id} finished.")
+            snap = msg["snapshot"]
+            r = compute_reward(snap, progress_delta=0.0, done=True, stuck=False)
+            print(f"[TrainingProcess] P{player_id} finished. reward={r:.2f}")
             continue
 
         snap  = msg["snapshot"]
         frame = cap()
-        r = reward.reward_for_frame(snap, player_id)
+
+        # Calculate progress delta
+        rc = snap["race_completion"]
+        progress_delta = rc - last_rc
+        last_rc = rc
+
+        r = compute_reward(snap, progress_delta, done=False, stuck=False)
         action_idx = agent.get_action(frame, player_id)
         send_action(conn, action_idx)
+
 
 print("[TrainingProcess] Starting up...")
 

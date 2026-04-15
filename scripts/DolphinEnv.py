@@ -125,8 +125,8 @@ def on_frame():
     if p1_terminal and p2_terminal:
         SAVE_STATE = pick_save_state()
         savestate.load_from_file(SAVE_STATE)
-        send_json(sock1, {"reset": True})
-        send_json(sock2, {"reset": True})
+        send_json(sock1, {"reset": True, "stuck": s1["stuck"]})
+        send_json(sock2, {"reset": True, "stuck": s2["stuck"]})
         s1, s2 = make_state(), make_state()
         frame_counter = 0
         print("[DolphinEnv] Episode reset.")

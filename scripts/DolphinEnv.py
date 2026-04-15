@@ -117,7 +117,8 @@ def on_frame():
 
         send_json(sock, {"snapshot": snap, "done": False, "reset": False})
         action_idx = recv_action(sock)
-        act.apply(action_idx, ctrl_id)
+        if ctrl_id != 0:
+            act.apply(action_idx, ctrl_id)
 
     p1_terminal = s1["done"] or s1["stuck"]
     p2_terminal = s2["done"] or s2["stuck"]

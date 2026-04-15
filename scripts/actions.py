@@ -9,6 +9,7 @@ Currently items are disabled by default.
 
 from dolphin import controller
 
+
 # Steering values for StickX
 STEER_LEFT       = -1.0
 STEER_SOFT_LEFT  = -0.5
@@ -37,9 +38,6 @@ class Action:
             "R": self.r_button,
             "L": self.l_button,
             "Up": self.d_up,
-            
-            # TODO: explicitly releasing everything else here because 
-            # Dolphin was getting weird ghost inputs otherwise
             "Down": False,
             "Left": False,
             "Right": False,
@@ -95,13 +93,12 @@ ACTION_TABLE: list[Action] = [
 
 NUM_ACTIONS = len(ACTION_TABLE)
 
-
 class ActionSpace:
     """
     Wrapper for the discrete action space so the agent can just output an int.
     """
 
-    def __init__(self, use_items: bool = True):
+    def __init__(self, use_items: bool = False):
         self.actions: list[Action] = []
         
         # filter out item actions if we don't want them

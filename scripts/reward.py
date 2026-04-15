@@ -36,7 +36,7 @@ def compute_reward(snapshot: dict, progress_delta: float, done: bool, stuck: boo
         reward -= 0.5
 
     # Wall collision penalty
-    if snapshot["wall_collision"] > 0:
+    if snapshot["wall_collide"] > 0:
         reward -= 0.2
 
     return reward

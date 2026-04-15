@@ -1,5 +1,6 @@
 # TrainingProcess.py
 import socket, struct, json, threading, os, random, time
+
 from DolphinCapture import DolphinCapture
 from reward import compute_reward
 
@@ -39,7 +40,8 @@ def make_capture(player_id, retries=20, delay=1.0):
 
 def player_loop(player_id, conn):
     cap = make_capture(player_id)
-    last_rc = 1.0    # race_completion starts at ~1.0
+    last_rc = 1.0
+    episode_reward = 0.0
 
     while True:
         msg = recv_json(conn)
@@ -47,27 +49,27 @@ def player_loop(player_id, conn):
             break
 
         if msg.get("reset"):
-            last_rc = 1.0    # reset delta tracking on new episode
-            snap = msg["snapshot"]
-            r = compute_reward(snap, progress_delta=0.0, done=True, stuck=False)            
-            print(f"[TrainingProcess] P{player_id} episode reset.")
+            stuck = msg.get("stuck", False)
+            r = compute_reward({}, progress_delta=0.0, done=not stuck, stuck=stuck)
+            episode_reward += r
+            print(f"[TrainingProcess] P{player_id} episode end. stuck={stuck} total_reward={episode_reward:.2f}")
+            last_rc = 1.0
+            episode_reward = 0.0
             continue
 
         if msg.get("done"):
             snap = msg["snapshot"]
             r = compute_reward(snap, progress_delta=0.0, done=True, stuck=False)
-            print(f"[TrainingProcess] P{player_id} finished. reward={r:.2f}")
+            episode_reward += r
             continue
 
         snap  = msg["snapshot"]
         frame = cap()
-
-        # Calculate progress delta
         rc = snap["race_completion"]
         progress_delta = rc - last_rc
         last_rc = rc
-
         r = compute_reward(snap, progress_delta, done=False, stuck=False)
+        episode_reward += r
         action_idx = agent.get_action(frame, player_id)
         send_action(conn, action_idx)
 

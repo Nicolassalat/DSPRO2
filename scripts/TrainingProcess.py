@@ -44,8 +44,9 @@ def player_loop(player_id, conn):
     episode_reward = 0.0
 
     while True:
-        msg = recv_json(conn)
-        if msg is None:
+        try:
+            msg = recv_json(conn)
+        except ConnectionResetError:
             break
 
         if msg.get("reset"):

@@ -48,6 +48,8 @@ def player_loop(player_id, conn):
 
         if msg.get("reset"):
             last_rc = 1.0    # reset delta tracking on new episode
+            snap = msg["snapshot"]
+            r = compute_reward(snap, progress_delta=0.0, done=True, stuck=False)            
             print(f"[TrainingProcess] P{player_id} episode reset.")
             continue
 

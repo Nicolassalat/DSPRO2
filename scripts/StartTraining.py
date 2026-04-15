@@ -1,7 +1,7 @@
 #StartTraining.py
 import os, sys, time, re, subprocess
 
-PROJECT_ROOT  = r"C:\Users\Nicolas\LocalDocuments\HSLU\DSPRO2"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS_DIR   = os.path.join(PROJECT_ROOT, "scripts")
 ISO_PATH      = os.path.join(PROJECT_ROOT, "game", "mkw.iso")
 DOLPHIN_EXE   = os.path.join(PROJECT_ROOT, "emulator", "Dolphin.exe")

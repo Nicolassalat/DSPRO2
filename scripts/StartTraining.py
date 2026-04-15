@@ -36,14 +36,18 @@ training_proc = subprocess.Popen(
 print("[StartTraining] Waiting for TrainingProcess to be ready...")
 while not os.path.exists(READY_FILE):
     time.sleep(0.1)
+    
 print("[StartTraining] TrainingProcess ready.")
 
 print("[StartTraining] Launching Dolphin...")
-subprocess.Popen([
-    DOLPHIN_EXE,
-    "-e", ISO_PATH,
-    "--script", ENV_SCRIPT,
-])
+try:
+    dolphin_proc = subprocess.Popen(
+        [DOLPHIN_EXE,
+        "-e", ISO_PATH,
+        "--script", ENV_SCRIPT],
+    )
+except Exception as e:
+    print(f"[StartTraining] Failed to launch Dolphin: {e}")
 
 print("[StartTraining] All systems go.")
 training_proc.wait()

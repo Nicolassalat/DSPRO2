@@ -7,8 +7,7 @@ from reward import compute_reward
 HOST       = "127.0.0.1"
 PORT_P1    = 55001
 PORT_P2    = 55002
-READY_FILE = os.path.join(os.getcwd(), "training_ready.txt")
-
+READY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "training_ready.txt")
 
 class agent:
     @staticmethod

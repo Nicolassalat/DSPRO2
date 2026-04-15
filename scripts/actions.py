@@ -3,8 +3,8 @@
 MKWii RL action space mapping.
 
 Maps our discrete agent actions to actual GameCube controller inputs. 
-Decided to stick to a smaller discrete space (18 actions) to make training faster.
-Currently items are disabled by default.
+Decided to stick to a smaller discrete space (15-18 actions) to make training faster.
+Items are disabled by default.
 """
 
 from dolphin import controller

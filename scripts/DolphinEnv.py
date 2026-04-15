@@ -2,6 +2,7 @@
 import sys, os, socket, struct, json, random
 
 sys.path.insert(0, os.path.join(os.getcwd(), "scripts"))
+sys.path.insert(0, os.getcwd())
 
 from dolphin import event, savestate
 #from dolphin import gui
@@ -15,7 +16,7 @@ FRAMESKIP    = 4
 STUCK_STEPS  = 225
 STUCK_THRESH = 0.01
 
-STATES_DIR = os.path.join(os.getcwd(), "save_states")
+STATES_DIR = os.path.join(os.getcwd(), "..", "save_states") if os.path.basename(os.getcwd()).lower() == "scripts" else os.path.join(os.getcwd(), "save_states")
 
 def pick_save_state():
     states = [f for f in os.listdir(STATES_DIR) if os.path.isfile(os.path.join(STATES_DIR, f))]

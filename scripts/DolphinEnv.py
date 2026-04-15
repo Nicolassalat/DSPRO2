@@ -65,7 +65,7 @@ initialized = False
 
 print("[DolphinEnv] Imports OK.")
 print("[DolphinEnv] Startup complete, connected to training process.")
-_last_snap1, _last_snap2 = None, None
+# _last_snap1, _last_snap2 = None, None
 
 @event.on_frameadvance
 def on_frame():

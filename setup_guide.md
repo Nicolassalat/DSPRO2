@@ -1,16 +1,15 @@
 # Mario Kart Wii Reinforcement Learning — Setup Guide
 
-## Step 1: Download UV
-Download and install UV from: https://docs.astral.sh/uv/#installation
-
-## Step 2: Download Mario Kart Wii ROM
-Download the ROM from: https://romsretro.com/mario-kart-wii-rom/ (but pssst... not quite legal 🤫)
-place at game/mkw.iso
-
-## Step 3: Clone the Git Repository
+## Step 1: Clone the Git Repository
 ```
 git clone https://github.com/Nicolassalat/DSPRO2/
 ```
+## Step 2: Download UV
+Download and install UV from: https://docs.astral.sh/uv/#installation
+
+## Step 3: Download Mario Kart Wii ROM
+Download the ROM from: https://romsretro.com/mario-kart-wii-rom/ (but pssst... not quite legal 🤫)
+place at game/mkw.iso
 
 ## Step 4: Navigate into the Project Folder
 ```

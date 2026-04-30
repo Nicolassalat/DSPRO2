@@ -8,7 +8,7 @@ DOLPHIN_EXE   = os.path.join(PROJECT_ROOT, "emulator", "Dolphin.exe")
 ENV_SCRIPT    = os.path.join(SCRIPTS_DIR, "DolphinEnv.py")
 READY_FILE    = os.path.join(PROJECT_ROOT, "training_ready.txt")
 DOLPHIN_INI   = os.path.join(os.environ["APPDATA"], "Dolphin Emulator", "Config", "Dolphin.ini")
-EMULATION_SPEED = 2.0
+EMULATION_SPEED = 1.0
 
 def set_emulation_speed(speed):
     with open(DOLPHIN_INI, "r") as f:

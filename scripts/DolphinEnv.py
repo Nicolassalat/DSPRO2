@@ -16,13 +16,41 @@ FRAMESKIP    = 4
 STUCK_STEPS  = 225
 STUCK_THRESH = 0.01
 
-STATES_DIR = os.path.join(os.getcwd(), "..", "save_states") if os.path.basename(os.getcwd()).lower() == "scripts" else os.path.join(os.getcwd(), "save_states")
+STATES_BASE = os.path.join(os.getcwd(), "..", "save_states") if os.path.basename(os.getcwd()).lower() == "scripts" else os.path.join(os.getcwd(), "save_states")
+
+# Track progression — number of episodes before introducing each new track
+EPISODES_LC_ONLY  = 500   # episodes 0-499: LC only
+EPISODES_ADD_DC   = 500   # episodes 500-999: LC + DC
+EPISODES_ADD_DDR  = 500   # episodes 1000-1499: LC + DC + DDR
+# episodes 1500+: all four tracks
+
+episode_count = 0
+
+TRACK_FOLDERS = {
+    "lc":   os.path.join(STATES_BASE, "lc"),
+    "dc":   os.path.join(STATES_BASE, "dc"),
+    "ddr":  os.path.join(STATES_BASE, "ddr"),
+    "dksc": os.path.join(STATES_BASE, "dksc"),
+}
+
+def get_active_tracks():
+    if episode_count < EPISODES_LC_ONLY:
+        return ["lc"]
+    elif episode_count < EPISODES_LC_ONLY + EPISODES_ADD_DC:
+        return ["lc", "dc"]
+    elif episode_count < EPISODES_LC_ONLY + EPISODES_ADD_DC + EPISODES_ADD_DDR:
+        return ["lc", "dc", "ddr"]
+    else:
+        return ["lc", "dc", "ddr", "dksc"]
 
 def pick_save_state():
-    states = [f for f in os.listdir(STATES_DIR) if os.path.isfile(os.path.join(STATES_DIR, f))]
+    active = get_active_tracks()
+    track = random.choice(active)
+    folder = TRACK_FOLDERS[track]
+    states = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
     if not states:
-        raise RuntimeError("No save states found.")
-    return os.path.join(STATES_DIR, random.choice(states))
+        raise RuntimeError(f"No save states found in {folder}")
+    return os.path.join(folder, random.choice(states))
 
 def make_sock(port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -124,10 +152,12 @@ def on_frame():
     p2_terminal = s2["done"] or s2["stuck"]
 
     if p1_terminal and p2_terminal:
-        SAVE_STATE = pick_save_state()
-        savestate.load_from_file(SAVE_STATE)
-        send_json(sock1, {"reset": True, "stuck": s1["stuck"]})
-        send_json(sock2, {"reset": True, "stuck": s2["stuck"]})
-        s1, s2 = make_state(), make_state()
-        frame_counter = 0
-        print("[DolphinEnv] Episode reset.")
+            global episode_count
+            episode_count += 1
+            SAVE_STATE = pick_save_state()
+            savestate.load_from_file(SAVE_STATE)
+            send_json(sock1, {"reset": True, "stuck": s1["stuck"]})
+            send_json(sock2, {"reset": True, "stuck": s2["stuck"]})
+            s1, s2 = make_state(), make_state()
+            frame_counter = 0
+            print(f"[DolphinEnv] Episode reset. episode={episode_count} tracks={get_active_tracks()}")

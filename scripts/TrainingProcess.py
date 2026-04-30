@@ -1,7 +1,7 @@
 # TrainingProcess.py
 import socket, struct, json, threading, os, random, time
 from DolphinCapture import DolphinCapture
-from reward import compute_reward
+from scripts.RewardFunction import compute_reward
 
 HOST       = "127.0.0.1"
 PORT_P1    = 55001

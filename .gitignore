@@ -14,3 +14,6 @@ wheels/
 
 # Emulator files
 emulator/
+
+# Training ready file
+training_ready.txt

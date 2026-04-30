@@ -58,7 +58,7 @@ def player_loop(player_id, conn):
             continue
 
         if msg.get("done"):
-            snap = msg["snapshot"]
+            snap = msg.get("snapshot", {})
             r = compute_reward(snap, progress_delta=0.0, done=True, stuck=False)
             episode_reward += r
             continue

@@ -18,7 +18,6 @@ cd DSPRO2
 
 ## Step 5: Create the Virtual Environment and Install Dependencies
 ```
-uv init
 uv sync
 uv lock
 ```

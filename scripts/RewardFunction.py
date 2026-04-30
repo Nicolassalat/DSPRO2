@@ -1,4 +1,4 @@
-# reward.py
+# RewardFunction.py
 
 # Set to True when training with items (mushrooms grant offroad invincibility)
 USE_ITEMS = False

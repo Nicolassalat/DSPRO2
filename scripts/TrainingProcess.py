@@ -1,18 +1,16 @@
 # TrainingProcess.py
-import socket, struct, json, threading, os, random, time
+import socket, struct, json, threading, os, time, random
 
 from DolphinCapture import DolphinCapture
 from RewardFunction import compute_reward
+from neural_agent import NeuralAgent
 
 HOST       = "127.0.0.1"
 PORT_P1    = 55001
 PORT_P2    = 55002
 READY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "training_ready.txt")
 
-class agent:
-    @staticmethod
-    def get_action(frame, player_id):
-        return random.randint(0, 13)
+agent = NeuralAgent(num_actions=15)
 
 
 def send_action(sock, action_idx):
@@ -61,16 +59,20 @@ def player_loop(player_id, conn):
             snap = msg.get("snapshot", {})
             r = compute_reward(snap, progress_delta=0.0, done=True, stuck=False)
             episode_reward += r
+            frame = cap()
+            agent.step(player_id, frame, r, terminal=True)
             continue
 
-        snap  = msg["snapshot"]
+        snap = msg["snapshot"]
         frame = cap()
         rc = snap["race_completion"]
         progress_delta = rc - last_rc
         last_rc = rc
         r = compute_reward(snap, progress_delta, done=False, stuck=False)
         episode_reward += r
-        action_idx = agent.get_action(frame, player_id)
+        action_idx = agent.step(player_id, frame, r, terminal=False)
+        if action_idx is None:
+            action_idx = random.randrange(agent.num_actions)
         send_action(conn, action_idx)
 
 

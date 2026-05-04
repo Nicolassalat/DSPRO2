@@ -7,6 +7,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "BTR"))
+from networks.btr import BTRNetwork
+
 FRAME_WIDTH = 140
 FRAME_HEIGHT = 114
 NUM_ACTIONS = 15
@@ -29,34 +33,6 @@ class ReplayBuffer:
         return len(self.buffer)
 
 
-class ConvDQN(nn.Module):
-    def __init__(self, num_actions: int):
-        super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
-
-        with torch.no_grad():
-            dummy = torch.zeros(1, 1, FRAME_HEIGHT, FRAME_WIDTH)
-            conv_output_size = self.conv(dummy).shape[1]
-
-        self.head = nn.Sequential(
-            nn.Linear(conv_output_size, 512),
-            nn.ReLU(),
-            nn.Linear(512, num_actions),
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.conv(x)
-        return self.head(x)
-
-
 class NeuralAgent:
     def __init__(
         self,
@@ -72,7 +48,22 @@ class NeuralAgent:
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.num_actions = num_actions
-        self.policy_net = ConvDQN(self.num_actions).to(self.device)
+        # Use BTRNetwork as the policy network
+        input_channels = 1  # Grayscale frames
+        input_shape = (FRAME_HEIGHT, FRAME_WIDTH)
+        features_dim = 256
+        channel_list = [32, 64, 64]
+        n_taus = 8
+        embedding_dim = 64
+        self.policy_net = BTRNetwork(
+            input_channels=input_channels,
+            input_shape=input_shape,
+            features_dim=features_dim,
+            channel_list=channel_list,
+            num_actions=num_actions,
+            n_taus=n_taus,
+            embedding_dim=embedding_dim
+        ).to(self.device)
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=lr)
         self.replay_buffer = ReplayBuffer(replay_capacity)
         self.batch_size = batch_size
@@ -132,8 +123,9 @@ class NeuralAgent:
             return random.randrange(self.num_actions)
 
         with torch.no_grad():
-            q_values = self.policy_net(state.unsqueeze(0))
-            return int(q_values.argmax(dim=1).item())
+            q_values, _ = self.policy_net(state.unsqueeze(0))
+            q_mean = q_values.mean(dim=1)  # Average over taus
+            return int(q_mean.argmax(dim=1).item())
 
     def step(self, player_id: int, frame, reward: float, terminal: bool = False) -> int | None:
         if frame is None:
@@ -180,10 +172,13 @@ class NeuralAgent:
         non_final_mask = torch.tensor([ns is not None for ns in next_states], dtype=torch.bool)
         non_final_next_states = torch.stack([ns for ns in next_states if ns is not None]).to(self.device) if any(non_final_mask) else torch.empty((0, 1, FRAME_HEIGHT, FRAME_WIDTH), device=self.device)
 
-        current_q = self.policy_net(state_batch).gather(1, action_batch)
+        current_q_values, _ = self.policy_net(state_batch)
+        current_q = current_q_values.mean(dim=1).gather(1, action_batch)  # Mean over taus, then gather
+
         next_q_values = torch.zeros((self.batch_size, 1), device=self.device)
         if non_final_next_states.shape[0] > 0:
-            next_q_values[non_final_mask] = self.policy_net(non_final_next_states).max(dim=1, keepdim=True)[0].detach()
+            next_q_values_batch, _ = self.policy_net(non_final_next_states)
+            next_q_values[non_final_mask] = next_q_values_batch.mean(dim=1).max(dim=1, keepdim=True)[0].detach()
 
         target_q = reward_batch + self.gamma * next_q_values * (1.0 - done_batch)
 

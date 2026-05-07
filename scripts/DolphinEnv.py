@@ -1,5 +1,5 @@
 #DolphinEnv.py
-import sys, os, socket, struct, json, random
+import sys, os, socket, struct, json, random, select
 
 sys.path.insert(0, os.path.join(os.getcwd(), "scripts"))
 sys.path.insert(0, os.getcwd())
@@ -64,6 +64,19 @@ def send_json(sock, data):
 def recv_action(sock):
     return struct.unpack(">I", sock.recv(4))[0]
 
+def try_recv_action(sock):
+    """Drain all pending actions, return the latest one or None if nothing ready."""
+    action = None
+    while True:
+        ready, _, _ = select.select([sock], [], [], 0)
+        if not ready:
+            break
+        data = sock.recv(4)
+        if len(data) < 4:
+            break
+        action = struct.unpack(">I", data)[0]
+    return action
+
 def make_state():
     return {"done": False, "stuck": False, "stuck_steps": 0, "last_completion": 1.0}
 
@@ -84,6 +97,8 @@ def _draw_overlay(snap1, snap2, s1, s2):
         gui.draw_text((tx, ty), 0xFFFFFFFF, f"    speed: {snap['speed']:.1f}  offroad: {snap['is_offroad']}  done: {s['done']}  stuck: {s['stuck']}")
         ty += lh
 
+last_actions = {0: 0, 1: 0}
+
 SAVE_STATE = pick_save_state()
 mem1, mem2 = GameMemory(player_id=0), GameMemory(player_id=1)
 act1, act2 = ActionSpace(use_items=False), ActionSpace(use_items=False)
@@ -98,7 +113,7 @@ print("[DolphinEnv] Startup complete, connected to training process.")
 
 @event.on_frameadvance
 def on_frame():
-    global frame_counter, initialized, s1, s2, SAVE_STATE, _last_snap1, _last_snap2
+    global frame_counter, initialized, s1, s2, SAVE_STATE, _last_snap1, _last_snap2, last_actions
 
     if not initialized:
         savestate.load_from_file(SAVE_STATE)
@@ -145,8 +160,10 @@ def on_frame():
             s["stuck"] = False
 
         send_json(sock, {"snapshot": snap, "done": False, "reset": False})
-        action_idx = recv_action(sock)
-        act.apply(action_idx, ctrl_id)
+        new_action = try_recv_action(sock)
+        if new_action is not None:
+            last_actions[ctrl_id] = new_action
+        act.apply(last_actions[ctrl_id], ctrl_id)
 
     p1_terminal = s1["done"] or s1["stuck"]
     p2_terminal = s2["done"] or s2["stuck"]

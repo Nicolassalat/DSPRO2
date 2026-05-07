@@ -152,7 +152,8 @@ class NeuralAgent:
             action = self.select_action(frame)
             self.last_state[player_id] = state
             self.last_action[player_id] = action
-            self.optimize_model()
+            if self.steps_done % 4 == 0:
+                self.optimize_model()
             return action
 
     def _cleanup_episode(self, player_id: int):

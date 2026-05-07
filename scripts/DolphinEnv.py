@@ -19,10 +19,10 @@ STUCK_THRESH = 0.01
 STATES_BASE = os.path.join(os.getcwd(), "..", "save_states") if os.path.basename(os.getcwd()).lower() == "scripts" else os.path.join(os.getcwd(), "save_states")
 
 # Track progression — number of episodes before introducing each new track
-EPISODES_LC_ONLY  = 500   # episodes 0-499: LC only
-EPISODES_ADD_DC   = 500   # episodes 500-999: LC + DC
-EPISODES_ADD_DDR  = 500   # episodes 1000-1499: LC + DC + DDR
-# episodes 1500+: all four tracks
+EPISODES_LC_ONLY  = 3000   # episodes 0-2999: LC only
+EPISODES_ADD_DC   = 3000   # episodes 3000-5999: LC + DC
+EPISODES_ADD_DDR  = 3000   # episodes 6000-8999: LC + DC + DDR
+# episodes 9000+: all four tracks
 
 episode_count = 0
 

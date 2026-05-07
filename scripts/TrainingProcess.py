@@ -26,7 +26,7 @@ def recv_json(sock):
         data += sock.recv(length - len(data))
     return json.loads(data.decode())
 
-def make_capture(player_id, retries=20, delay=1.0):
+def make_capture(player_id, retries=20, delay=10.0):
     for i in range(retries):
         try:
             return DolphinCapture(player_id=player_id)

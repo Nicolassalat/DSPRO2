@@ -10,7 +10,7 @@ PORT_P1    = 55001
 PORT_P2    = 55002
 READY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "training_ready.txt")
 
-agent = NeuralAgent(num_actions=15)
+agent = NeuralAgent(num_actions=14)
 
 
 def send_action(sock, action_idx):
@@ -46,11 +46,17 @@ def player_loop(player_id, conn):
         except ConnectionResetError:
             break
 
+        if msg is None:
+            print(f"[TrainingProcess] Player {player_id} disconnected.")
+            break
+
         if msg.get("reset"):
             stuck = msg.get("stuck", False)
             print(f"[DEBUG] p{player_id} reset message received. stuck={stuck}")
             r = compute_reward({}, progress_delta=0.0, done=not stuck, stuck=stuck)
             episode_reward += r
+            frame = cap()
+            agent.step(player_id, frame, r, terminal=True)  # <-- push terminal transition
             print(f"[TrainingProcess] P{player_id} episode end. stuck={stuck} total_reward={episode_reward:.2f}")
             last_rc = 1.0
             episode_reward = 0.0

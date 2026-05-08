@@ -17,6 +17,7 @@ STUCK_STEPS  = 225
 STUCK_THRESH = 0.01
 
 STATES_BASE = os.path.join(os.getcwd(), "..", "save_states") if os.path.basename(os.getcwd()).lower() == "scripts" else os.path.join(os.getcwd(), "save_states")
+STATE_FILE  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "training_state.json")
 
 # Track progression — number of episodes before introducing each new track
 EPISODES_LC_ONLY  = 3000   # episodes 0-2999: LC only
@@ -24,7 +25,20 @@ EPISODES_ADD_DC   = 3000   # episodes 3000-5999: LC + DC
 EPISODES_ADD_DDR  = 3000   # episodes 6000-8999: LC + DC + DDR
 # episodes 9000+: all four tracks
 
-episode_count = 0
+def load_episode_count():
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE) as f:
+                return json.load(f).get("episode_count", 0)
+        except Exception:
+            return 0
+    return 0
+
+def save_episode_count():
+    with open(STATE_FILE, "w") as f:
+        json.dump({"episode_count": episode_count}, f)
+
+episode_count = load_episode_count()
 
 TRACK_FOLDERS = {
     "lc":   os.path.join(STATES_BASE, "lc"),
@@ -171,6 +185,7 @@ def on_frame():
     if p1_terminal and p2_terminal:
             global episode_count
             episode_count += 1
+            save_episode_count()
             SAVE_STATE = pick_save_state()
             savestate.load_from_file(SAVE_STATE)
             send_json(sock1, {"reset": True, "stuck": s1["stuck"]})

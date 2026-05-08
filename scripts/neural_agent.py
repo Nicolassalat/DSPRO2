@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import copy
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "BTR"))
 from networks.btr import BTRNetwork
@@ -61,6 +62,9 @@ class NeuralAgent:
             n_taus=n_taus,
             embedding_dim=embedding_dim
         ).to(self.device)
+        self.target_net = copy.deepcopy(self.policy_net)
+        for p in self.target_net.parameters():
+            p.requires_grad = False
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=lr)
         self.replay_buffer = ReplayBuffer(replay_capacity)
         self.batch_size = batch_size
@@ -160,8 +164,8 @@ class NeuralAgent:
         current_q_values, _ = self.policy_net(state_batch)
         current_q = current_q_values.mean(dim=1).gather(1, action_batch)
 
-        self.policy_net.reset_noise()
-        next_q_values_batch, _ = self.policy_net(next_state_batch)
+        self.target_net.reset_noise()
+        next_q_values_batch, _ = self.target_net(next_state_batch)
         next_q_values = next_q_values_batch.mean(dim=1).max(dim=1, keepdim=True)[0].detach()
 
         target_q = reward_batch + self.gamma * next_q_values * (1.0 - done_batch)
@@ -173,4 +177,5 @@ class NeuralAgent:
         self.optimizer.step()
 
         if self.steps_done % 1000 == 0:
+            self.target_net.load_state_dict(self.policy_net.state_dict())
             self.save_model()

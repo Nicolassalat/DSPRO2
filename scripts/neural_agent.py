@@ -3,10 +3,12 @@ import random
 import threading
 from collections import deque
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import copy
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "BTR"))
 from networks.btr import BTRNetwork
@@ -41,9 +43,6 @@ class NeuralAgent:
         batch_size: int = 32,
         gamma: float = 0.99,
         lr: float = 1e-4,
-        epsilon_start: float = 1.0,
-        epsilon_final: float = 0.05,
-        epsilon_decay: int = 100000,
         model_path: str | None = None,
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -64,13 +63,13 @@ class NeuralAgent:
             n_taus=n_taus,
             embedding_dim=embedding_dim
         ).to(self.device)
+        self.target_net = copy.deepcopy(self.policy_net)
+        for p in self.target_net.parameters():
+            p.requires_grad = False
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=lr)
         self.replay_buffer = ReplayBuffer(replay_capacity)
         self.batch_size = batch_size
         self.gamma = gamma
-        self.epsilon_start = epsilon_start
-        self.epsilon_final = epsilon_final
-        self.epsilon_decay = epsilon_decay
         self.steps_done = 0
         self.lock = threading.Lock()
 
@@ -101,26 +100,15 @@ class NeuralAgent:
     def _frame_to_tensor(self, frame) -> torch.Tensor:
         if frame.mode != "L":
             frame = frame.convert("L")
-        data = torch.tensor(list(frame.getdata()), dtype=torch.float32)
-        data = data.view(FRAME_HEIGHT, FRAME_WIDTH).div_(255.0)
+        data = torch.from_numpy(np.array(frame, dtype=np.float32))
         return data.unsqueeze(0)
-
-    def _epsilon(self):
-        return max(
-            self.epsilon_final,
-            self.epsilon_start - self.steps_done * (self.epsilon_start - self.epsilon_final) / self.epsilon_decay,
-        )
 
     def select_action(self, frame) -> int:
         if frame is None:
             return random.randrange(self.num_actions)
 
         state = self._frame_to_tensor(frame).to(self.device)
-        epsilon = self._epsilon()
         self.steps_done += 1
-
-        if random.random() < epsilon:
-            return random.randrange(self.num_actions)
 
         with torch.no_grad():
             q_values, _ = self.policy_net(state.unsqueeze(0))
@@ -170,24 +158,38 @@ class NeuralAgent:
         reward_batch = torch.tensor(rewards, dtype=torch.float32, device=self.device).unsqueeze(1)
         done_batch = torch.tensor(dones, dtype=torch.float32, device=self.device).unsqueeze(1)
 
-        non_final_mask = torch.tensor([ns is not None for ns in next_states], dtype=torch.bool)
-        non_final_next_states = torch.stack([ns for ns in next_states if ns is not None]).to(self.device) if any(non_final_mask) else torch.empty((0, 1, FRAME_HEIGHT, FRAME_WIDTH), device=self.device)
+        next_state_batch = torch.stack(next_states).to(self.device)
 
-        current_q_values, _ = self.policy_net(state_batch)
-        current_q = current_q_values.mean(dim=1).gather(1, action_batch)  # Mean over taus, then gather
+        # current quantile Q-values: (B, n_taus)
+        self.policy_net.reset_noise()
+        current_q_values, taus = self.policy_net(state_batch)
+        current_q = current_q_values.gather(
+            2, action_batch.unsqueeze(1).expand(-1, current_q_values.shape[1], -1)
+        ).squeeze(2)  # (B, n_taus)
 
-        next_q_values = torch.zeros((self.batch_size, 1), device=self.device)
-        if non_final_next_states.shape[0] > 0:
-            next_q_values_batch, _ = self.policy_net(non_final_next_states)
-            next_q_values[non_final_mask] = next_q_values_batch.mean(dim=1).max(dim=1, keepdim=True)[0].detach()
+        # target quantile Q-values: (B, n_taus_target) — Double DQN
+        self.target_net.reset_noise()
+        with torch.no_grad():
+            policy_next_q, _ = self.policy_net(next_state_batch)
+            best_actions = policy_next_q.mean(dim=1).argmax(dim=1, keepdim=True)
+            next_q_values_batch, _ = self.target_net(next_state_batch)
+            next_q = next_q_values_batch.gather(
+                2, best_actions.unsqueeze(1).expand(-1, next_q_values_batch.shape[1], -1)
+            ).squeeze(2)  # (B, n_taus_target)
+            target_q = (reward_batch + self.gamma * next_q * (1.0 - done_batch)).detach()
 
-        target_q = reward_batch + self.gamma * next_q_values * (1.0 - done_batch)
-
-        loss = F.smooth_l1_loss(current_q, target_q)
+        # quantile Huber loss
+        td_errors = target_q.unsqueeze(1) - current_q.unsqueeze(2)  # (B, n_taus, n_taus_target)
+        huber = F.huber_loss(current_q.unsqueeze(2).expand_as(td_errors),
+                             target_q.unsqueeze(1).expand_as(td_errors),
+                             reduction="none", delta=1.0)
+        taus_expanded = taus.unsqueeze(2).expand_as(td_errors)
+        loss = (torch.abs(taus_expanded - (td_errors < 0).float()) * huber).mean()
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), 10.0)
         self.optimizer.step()
 
         if self.steps_done % 1000 == 0:
+            self.target_net.load_state_dict(self.policy_net.state_dict())
             self.save_model()

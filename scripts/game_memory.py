@@ -227,6 +227,19 @@ class GameMemory:
     def snapshot(self):
         """Return a dict of all readable values. Useful for logging/debugging."""
         return {
+            "race_completion": self.race_completion(),
+            "speed": self.speed(),
+            "soft_speed_limit": self.soft_speed_limit(),
+            "offroad_invincibility": self.offroad_invincibility(),
+            "mush_and_boost": self.mush_and_boost(),
+            "is_offroad": self.is_offroad(),
+            "respawn_timer": self.respawn_timer(),
+            "wall_collide": self.wall_collide(),
+        }
+    
+    def snapshotfull(self):
+        """Return a dict of all readable values. Useful for logging/debugging."""
+        return {
             "stage": self.stage(),
             "race_completion": self.race_completion(),
             "current_lap": self.current_lap(),

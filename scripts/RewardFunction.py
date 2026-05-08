@@ -17,6 +17,10 @@ def compute_reward(snapshot: dict, progress_delta: float, done: bool, stuck: boo
     speed_ratio = snapshot["speed"] / snapshot["soft_speed_limit"] if snapshot["soft_speed_limit"] > 0 else 0.0
     reward += progress_delta * 100.0 * (1.0 + speed_ratio)
 
+    # Speed penalty — discourages standing still
+    if snapshot["speed"] < 10.0:
+        reward -= 0.1
+
     # Boost panel bonus — rewards hitting boost panels instead of driving around them
     if snapshot["mush_and_boost"] > 0:
         reward += 0.2

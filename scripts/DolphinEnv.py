@@ -187,6 +187,7 @@ def on_frame():
             global episode_count
             episode_count += 1
             save_episode_count()
+            print(f"[DEBUG] DolphinEnv episodecount incremented: {episode_count}")
             SAVE_STATE = pick_save_state()
             savestate.load_from_file(SAVE_STATE)
             send_json(sock1, {"reset": True, "stuck": s1["stuck"]})

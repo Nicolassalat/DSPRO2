@@ -41,9 +41,6 @@ class NeuralAgent:
         batch_size: int = 32,
         gamma: float = 0.99,
         lr: float = 1e-4,
-        epsilon_start: float = 1.0,
-        epsilon_final: float = 0.05,
-        epsilon_decay: int = 100000,
         model_path: str | None = None,
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -68,9 +65,6 @@ class NeuralAgent:
         self.replay_buffer = ReplayBuffer(replay_capacity)
         self.batch_size = batch_size
         self.gamma = gamma
-        self.epsilon_start = epsilon_start
-        self.epsilon_final = epsilon_final
-        self.epsilon_decay = epsilon_decay
         self.steps_done = 0
         self.lock = threading.Lock()
 
@@ -105,22 +99,12 @@ class NeuralAgent:
         data = data.view(FRAME_HEIGHT, FRAME_WIDTH)
         return data.unsqueeze(0)
 
-    def _epsilon(self):
-        return max(
-            self.epsilon_final,
-            self.epsilon_start - self.steps_done * (self.epsilon_start - self.epsilon_final) / self.epsilon_decay,
-        )
-
     def select_action(self, frame) -> int:
         if frame is None:
             return random.randrange(self.num_actions)
 
         state = self._frame_to_tensor(frame).to(self.device)
-        epsilon = self._epsilon()
         self.steps_done += 1
-
-        if random.random() < epsilon:
-            return random.randrange(self.num_actions)
 
         with torch.no_grad():
             q_values, _ = self.policy_net(state.unsqueeze(0))
@@ -173,8 +157,12 @@ class NeuralAgent:
         non_final_mask = torch.tensor([ns is not None for ns in next_states], dtype=torch.bool)
         non_final_next_states = torch.stack([ns for ns in next_states if ns is not None]).to(self.device) if any(non_final_mask) else torch.empty((0, 1, FRAME_HEIGHT, FRAME_WIDTH), device=self.device)
 
+        self.policy_net.reset_noise()
+
         current_q_values, _ = self.policy_net(state_batch)
         current_q = current_q_values.mean(dim=1).gather(1, action_batch)  # Mean over taus, then gather
+
+        self.policy_net.reset_noise()
 
         next_q_values = torch.zeros((self.batch_size, 1), device=self.device)
         if non_final_next_states.shape[0] > 0:

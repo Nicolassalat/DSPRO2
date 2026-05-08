@@ -3,6 +3,7 @@ import random
 import threading
 from collections import deque
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -99,8 +100,7 @@ class NeuralAgent:
     def _frame_to_tensor(self, frame) -> torch.Tensor:
         if frame.mode != "L":
             frame = frame.convert("L")
-        data = torch.tensor(list(frame.getdata()), dtype=torch.float32)
-        data = data.view(FRAME_HEIGHT, FRAME_WIDTH)
+        data = torch.from_numpy(np.array(frame, dtype=np.float32))
         return data.unsqueeze(0)
 
     def select_action(self, frame) -> int:

@@ -154,20 +154,15 @@ class NeuralAgent:
         reward_batch = torch.tensor(rewards, dtype=torch.float32, device=self.device).unsqueeze(1)
         done_batch = torch.tensor(dones, dtype=torch.float32, device=self.device).unsqueeze(1)
 
-        non_final_mask = torch.tensor([ns is not None for ns in next_states], dtype=torch.bool)
-        non_final_next_states = torch.stack([ns for ns in next_states if ns is not None]).to(self.device) if any(non_final_mask) else torch.empty((0, 1, FRAME_HEIGHT, FRAME_WIDTH), device=self.device)
+        next_state_batch = torch.stack(next_states).to(self.device)
 
         self.policy_net.reset_noise()
-
         current_q_values, _ = self.policy_net(state_batch)
-        current_q = current_q_values.mean(dim=1).gather(1, action_batch)  # Mean over taus, then gather
+        current_q = current_q_values.mean(dim=1).gather(1, action_batch)
 
         self.policy_net.reset_noise()
-
-        next_q_values = torch.zeros((self.batch_size, 1), device=self.device)
-        if non_final_next_states.shape[0] > 0:
-            next_q_values_batch, _ = self.policy_net(non_final_next_states)
-            next_q_values[non_final_mask] = next_q_values_batch.mean(dim=1).max(dim=1, keepdim=True)[0].detach()
+        next_q_values_batch, _ = self.policy_net(next_state_batch)
+        next_q_values = next_q_values_batch.mean(dim=1).max(dim=1, keepdim=True)[0].detach()
 
         target_q = reward_batch + self.gamma * next_q_values * (1.0 - done_batch)
 

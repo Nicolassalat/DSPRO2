@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.tensorboard import SummaryWriter
 
 import copy
 import sys
@@ -76,6 +77,7 @@ class NeuralAgent:
         self.last_state = {1: None, 2: None}
         self.last_action = {1: None, 2: None}
         self.model_path = model_path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "agent_model.pth")
+        self.writer = SummaryWriter(log_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "runs"))
         self.load_model()
 
     def load_model(self):
@@ -189,6 +191,9 @@ class NeuralAgent:
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), 10.0)
         self.optimizer.step()
+
+        self.writer.add_scalar("train/loss", loss.item(), self.steps_done)
+        self.writer.add_scalar("train/mean_q", current_q.mean().item(), self.steps_done)
 
         if self.steps_done % 1000 == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())

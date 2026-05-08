@@ -167,11 +167,12 @@ class NeuralAgent:
             2, action_batch.unsqueeze(1).expand(-1, current_q_values.shape[1], -1)
         ).squeeze(2)  # (B, n_taus)
 
-        # target quantile Q-values: (B, n_taus_target)
+        # target quantile Q-values: (B, n_taus_target) — Double DQN
         self.target_net.reset_noise()
         with torch.no_grad():
+            policy_next_q, _ = self.policy_net(next_state_batch)
+            best_actions = policy_next_q.mean(dim=1).argmax(dim=1, keepdim=True)
             next_q_values_batch, _ = self.target_net(next_state_batch)
-            best_actions = next_q_values_batch.mean(dim=1).argmax(dim=1, keepdim=True)
             next_q = next_q_values_batch.gather(
                 2, best_actions.unsqueeze(1).expand(-1, next_q_values_batch.shape[1], -1)
             ).squeeze(2)  # (B, n_taus_target)

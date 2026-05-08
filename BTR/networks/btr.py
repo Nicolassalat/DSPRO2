@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import layers.noisy_linear as NoisyLinear
+from layers.noisy_linear import NoisyLinear
 from encoders.impala_encoder import IMPALAEncoder
 from networks.value_stream import *
 from networks.iqn import *

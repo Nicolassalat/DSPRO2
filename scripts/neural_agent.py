@@ -75,7 +75,7 @@ class NeuralAgent:
 
         self.last_state = {1: None, 2: None}
         self.last_action = {1: None, 2: None}
-        self.model_path = model_path or os.path.join(os.path.dirname(__file__), "..", "agent_model.pth")
+        self.model_path = model_path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "agent_model.pth")
         self.load_model()
 
     def load_model(self):

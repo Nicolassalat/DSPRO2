@@ -10,6 +10,7 @@ dependencies = [
     "pillow>=12.2.0",
     "py7zr>=1.1.0",
     "pywin32>=311",
+    "tensorboard>=2.20.0",
     "torch==2.11.0+cu128",
     "torchvision==0.26.0+cu128",
     "windows-capture>=1.5.0",

@@ -56,7 +56,8 @@ def player_loop(player_id, conn):
             stuck = msg.get("stuck", False)
             r = compute_reward({}, progress_delta=0.0, done=not stuck, stuck=stuck)
             episode_reward += r
-            episode_num += 1
+            frame = cap()
+            agent.step(player_id, frame, r, terminal=True)  # <-- push terminal transition
             print(f"[TrainingProcess] P{player_id} episode end. stuck={stuck} total_reward={episode_reward:.2f}")
             agent.writer.add_scalar(f"episode/P{player_id}_reward", episode_reward, episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_length", episode_steps, episode_num)

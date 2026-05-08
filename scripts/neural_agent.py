@@ -160,17 +160,30 @@ class NeuralAgent:
 
         next_state_batch = torch.stack(next_states).to(self.device)
 
+        # current quantile Q-values: (B, n_taus)
         self.policy_net.reset_noise()
-        current_q_values, _ = self.policy_net(state_batch)
-        current_q = current_q_values.mean(dim=1).gather(1, action_batch)
+        current_q_values, taus = self.policy_net(state_batch)
+        current_q = current_q_values.gather(
+            2, action_batch.unsqueeze(1).expand(-1, current_q_values.shape[1], -1)
+        ).squeeze(2)  # (B, n_taus)
 
+        # target quantile Q-values: (B, n_taus_target)
         self.target_net.reset_noise()
-        next_q_values_batch, _ = self.target_net(next_state_batch)
-        next_q_values = next_q_values_batch.mean(dim=1).max(dim=1, keepdim=True)[0].detach()
+        with torch.no_grad():
+            next_q_values_batch, _ = self.target_net(next_state_batch)
+            best_actions = next_q_values_batch.mean(dim=1).argmax(dim=1, keepdim=True)
+            next_q = next_q_values_batch.gather(
+                2, best_actions.unsqueeze(1).expand(-1, next_q_values_batch.shape[1], -1)
+            ).squeeze(2)  # (B, n_taus_target)
+            target_q = (reward_batch + self.gamma * next_q * (1.0 - done_batch)).detach()
 
-        target_q = reward_batch + self.gamma * next_q_values * (1.0 - done_batch)
-
-        loss = F.smooth_l1_loss(current_q, target_q)
+        # quantile Huber loss
+        td_errors = target_q.unsqueeze(1) - current_q.unsqueeze(2)  # (B, n_taus, n_taus_target)
+        huber = F.huber_loss(current_q.unsqueeze(2).expand_as(td_errors),
+                             target_q.unsqueeze(1).expand_as(td_errors),
+                             reduction="none", delta=1.0)
+        taus_expanded = taus.unsqueeze(2).expand_as(td_errors)
+        loss = (torch.abs(taus_expanded - (td_errors < 0).float()) * huber).mean()
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), 10.0)

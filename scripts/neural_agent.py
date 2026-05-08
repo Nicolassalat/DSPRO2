@@ -102,7 +102,7 @@ class NeuralAgent:
         if frame.mode != "L":
             frame = frame.convert("L")
         data = torch.tensor(list(frame.getdata()), dtype=torch.float32)
-        data = data.view(FRAME_HEIGHT, FRAME_WIDTH).div_(255.0)
+        data = data.view(FRAME_HEIGHT, FRAME_WIDTH)
         return data.unsqueeze(0)
 
     def _epsilon(self):

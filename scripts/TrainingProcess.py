@@ -12,6 +12,13 @@ READY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tra
 
 agent = NeuralAgent(num_actions=14)
 
+def load_episode_offset():
+    state_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "training_state.json")
+    try:
+        with open(state_file) as f:
+            return json.load(f).get("episode_count", 0)
+    except Exception:
+        return 0
 
 def send_action(sock, action_idx):
     sock.sendall(struct.pack(">I", action_idx))
@@ -40,7 +47,8 @@ def player_loop(player_id, conn):
     last_rc = 1.0
     episode_reward = 0.0
     episode_steps = 0
-    episode_num = 0
+    episode_num = load_episode_offset() + 1
+
 
     while True:
         try:
@@ -58,11 +66,13 @@ def player_loop(player_id, conn):
             episode_reward += r
             frame = cap()
             agent.step(player_id, frame, r, terminal=True)  # <-- push terminal transition
-            print(f"[TrainingProcess] P{player_id} episode end. stuck={stuck} total_reward={episode_reward:.2f}")
+            print(f"[TrainingProcess] P{player_id} episode {episode_num} end. stuck={stuck} total_reward={episode_reward:.2f}")
             agent.writer.add_scalar(f"episode/P{player_id}_reward", episode_reward, episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_length", episode_steps, episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_stuck", int(stuck), episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_progress", last_rc, episode_num)
+            agent.writer.add_scalars("episode/reward", {f"P{player_id}": episode_reward}, episode_num)
+            episode_num += 1
             last_rc = 1.0
             episode_reward = 0.0
             episode_steps = 0
@@ -117,3 +127,4 @@ t1.start()
 t2.start()
 t1.join()
 t2.join()
+agent.close()

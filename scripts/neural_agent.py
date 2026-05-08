@@ -79,6 +79,7 @@ class NeuralAgent:
         self.model_path = model_path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "agent_model.pth")
         self.writer = SummaryWriter(log_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "runs"))
         self.load_model()
+        self.episode_count = 0
 
     def load_model(self):
         if os.path.exists(self.model_path):
@@ -195,6 +196,9 @@ class NeuralAgent:
         self.writer.add_scalar("train/loss", loss.item(), self.steps_done)
         self.writer.add_scalar("train/mean_q", current_q.mean().item(), self.steps_done)
 
-        if self.steps_done % 1000 == 0:
+        if self.steps_done % 500 == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
             self.save_model()
+
+    def close(self):
+        self.writer.close()

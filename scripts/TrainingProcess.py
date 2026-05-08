@@ -39,6 +39,8 @@ def player_loop(player_id, conn):
     cap = make_capture(player_id)
     last_rc = 1.0
     episode_reward = 0.0
+    episode_steps = 0
+    episode_num = 0
 
     while True:
         try:
@@ -48,16 +50,20 @@ def player_loop(player_id, conn):
 
         if msg.get("reset"):
             stuck = msg.get("stuck", False)
-            print(f"[DEBUG] p{player_id} reset message received. stuck={stuck}")
             r = compute_reward({}, progress_delta=0.0, done=not stuck, stuck=stuck)
             episode_reward += r
+            episode_num += 1
             print(f"[TrainingProcess] P{player_id} episode end. stuck={stuck} total_reward={episode_reward:.2f}")
+            agent.writer.add_scalar(f"episode/P{player_id}_reward", episode_reward, episode_num)
+            agent.writer.add_scalar(f"episode/P{player_id}_length", episode_steps, episode_num)
+            agent.writer.add_scalar(f"episode/P{player_id}_stuck", int(stuck), episode_num)
+            agent.writer.add_scalar(f"episode/P{player_id}_progress", last_rc, episode_num)
             last_rc = 1.0
             episode_reward = 0.0
+            episode_steps = 0
             continue
 
         if msg.get("done"):
-            print(f"[DEBUG] p{player_id} done message received.")
             snap = msg.get("snapshot", {})
             r = compute_reward(snap, progress_delta=0.0, done=True, stuck=False)
             episode_reward += r
@@ -72,6 +78,7 @@ def player_loop(player_id, conn):
         last_rc = rc
         r = compute_reward(snap, progress_delta, done=False, stuck=False)
         episode_reward += r
+        episode_steps += 1
         action_idx = agent.step(player_id, frame, r, terminal=False)
         if action_idx is None:
             action_idx = random.randrange(agent.num_actions)

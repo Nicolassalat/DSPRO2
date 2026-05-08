@@ -8,7 +8,7 @@ git clone https://github.com/Nicolassalat/DSPRO2/
 Download and install UV from: https://docs.astral.sh/uv/#installation
 
 ## Step 3: Download Mario Kart Wii ROM
-Download the ROM from: https://romsretro.com/mario-kart-wii-rom/ (but pssst... not quite legal 🤫)
+Download the ROM from: https://archive.org/download/mario-kart_202107/ (but pssst... not quite legal 🤫)
 place at game/mkw.iso
 
 ## Step 4: Navigate into the Project Folder

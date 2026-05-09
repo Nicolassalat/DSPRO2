@@ -28,4 +28,5 @@ scripts/training_state.json
 
 # agent file
 agent_model.pth
-scripts/agent_model.pth
+
+!runs_backup/**

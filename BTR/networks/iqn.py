@@ -17,8 +17,6 @@ class IQN(nn.Module):
             torch.arange(1, embedding_dim + 1).float()
         )
 
-        self._cosine_embedding()
-
     def _cosine_embedding(self, taus):
         x = torch.cos(taus.unsqueeze(-1) * math.pi * self._arange)
         x = F.relu(self._cos_embedding(x))

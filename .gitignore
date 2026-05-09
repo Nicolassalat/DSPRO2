@@ -17,3 +17,16 @@ emulator/
 
 # Training ready file
 training_ready.txt
+
+# TensorBoard logs
+runs/
+runs/**
+
+# training state file
+training_state.json
+scripts/training_state.json
+
+# agent file
+agent_model.pth
+
+!runs_backup/**

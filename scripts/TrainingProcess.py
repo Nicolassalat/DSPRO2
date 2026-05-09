@@ -1,19 +1,24 @@
 # TrainingProcess.py
-import socket, struct, json, threading, os, random, time
+import socket, struct, json, threading, os, time, random
 
 from DolphinCapture import DolphinCapture
 from RewardFunction import compute_reward
+from neural_agent import NeuralAgent
 
 HOST       = "127.0.0.1"
 PORT_P1    = 55001
 PORT_P2    = 55002
 READY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "training_ready.txt")
 
-class agent:
-    @staticmethod
-    def get_action(frame, player_id):
-        return random.randint(0, 13)
+agent = NeuralAgent(num_actions=14)
 
+def load_episode_offset():
+    state_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "training_state.json")
+    try:
+        with open(state_file) as f:
+            return json.load(f).get("episode_count", 0)
+    except Exception:
+        return 0
 
 def send_action(sock, action_idx):
     sock.sendall(struct.pack(">I", action_idx))
@@ -28,7 +33,7 @@ def recv_json(sock):
         data += sock.recv(length - len(data))
     return json.loads(data.decode())
 
-def make_capture(player_id, retries=20, delay=1.0):
+def make_capture(player_id, retries=20, delay=10.0):
     for i in range(retries):
         try:
             return DolphinCapture(player_id=player_id)
@@ -41,6 +46,9 @@ def player_loop(player_id, conn):
     cap = make_capture(player_id)
     last_rc = 1.0
     episode_reward = 0.0
+    episode_steps = 0
+    episode_num = load_episode_offset() + 1
+
 
     while True:
         try:
@@ -48,29 +56,47 @@ def player_loop(player_id, conn):
         except ConnectionResetError:
             break
 
+        if msg is None:
+            print(f"[TrainingProcess] Player {player_id} disconnected.")
+            break
+
         if msg.get("reset"):
             stuck = msg.get("stuck", False)
             r = compute_reward({}, progress_delta=0.0, done=not stuck, stuck=stuck)
             episode_reward += r
-            print(f"[TrainingProcess] P{player_id} episode end. stuck={stuck} total_reward={episode_reward:.2f}")
+            frame = cap()
+            agent.step(player_id, frame, r, terminal=True)  # <-- push terminal transition
+            print(f"[TrainingProcess] P{player_id} episode {episode_num} end. stuck={stuck} total_reward={episode_reward:.2f}")
+            agent.writer.add_scalar(f"episode/P{player_id}_reward", episode_reward, episode_num)
+            agent.writer.add_scalar(f"episode/P{player_id}_length", episode_steps, episode_num)
+            agent.writer.add_scalar(f"episode/P{player_id}_stuck", int(stuck), episode_num)
+            agent.writer.add_scalar(f"episode/P{player_id}_progress", last_rc, episode_num)
+            agent.writer.add_scalars("episode/reward", {f"P{player_id}": episode_reward}, episode_num)
+            episode_num += 1
             last_rc = 1.0
             episode_reward = 0.0
+            episode_steps = 0
             continue
 
         if msg.get("done"):
             snap = msg.get("snapshot", {})
             r = compute_reward(snap, progress_delta=0.0, done=True, stuck=False)
             episode_reward += r
+            frame = cap()
+            agent.step(player_id, frame, r, terminal=True)
             continue
 
-        snap  = msg["snapshot"]
+        snap = msg["snapshot"]
         frame = cap()
         rc = snap["race_completion"]
         progress_delta = rc - last_rc
         last_rc = rc
         r = compute_reward(snap, progress_delta, done=False, stuck=False)
         episode_reward += r
-        action_idx = agent.get_action(frame, player_id)
+        episode_steps += 1
+        action_idx = agent.step(player_id, frame, r, terminal=False)
+        if action_idx is None:
+            action_idx = random.randrange(agent.num_actions)
         send_action(conn, action_idx)
 
 
@@ -101,3 +127,4 @@ t1.start()
 t2.start()
 t1.join()
 t2.join()
+agent.close()

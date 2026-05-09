@@ -1,5 +1,5 @@
 #DolphinEnv.py
-import sys, os, socket, struct, json, random
+import sys, os, socket, struct, json, random, select
 
 sys.path.insert(0, os.path.join(os.getcwd(), "scripts"))
 sys.path.insert(0, os.getcwd())
@@ -17,14 +17,29 @@ STUCK_STEPS  = 225
 STUCK_THRESH = 0.01
 
 STATES_BASE = os.path.join(os.getcwd(), "..", "save_states") if os.path.basename(os.getcwd()).lower() == "scripts" else os.path.join(os.getcwd(), "save_states")
-
+STATE_FILE = os.path.join(os.getcwd(), "training_state.json")
 # Track progression — number of episodes before introducing each new track
-EPISODES_LC_ONLY  = 500   # episodes 0-499: LC only
-EPISODES_ADD_DC   = 500   # episodes 500-999: LC + DC
-EPISODES_ADD_DDR  = 500   # episodes 1000-1499: LC + DC + DDR
-# episodes 1500+: all four tracks
+EPISODES_LC_ONLY  = 3000   # episodes 0-2999: LC only
+EPISODES_ADD_DC   = 3000   # episodes 3000-5999: LC + DC
+EPISODES_ADD_DDR  = 3000   # episodes 6000-8999: LC + DC + DDR
+# episodes 9000+: all four tracks
 
-episode_count = 0
+def load_episode_count():
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE) as f:
+                return json.load(f).get("episode_count", 0)
+        except Exception:
+            return 0
+    return 0
+
+def save_episode_count():
+    with open(STATE_FILE, "w") as f:
+        json.dump({"episode_count": episode_count}, f)
+
+episode_count = load_episode_count()
+
+
 
 TRACK_FOLDERS = {
     "lc":   os.path.join(STATES_BASE, "lc"),
@@ -64,6 +79,19 @@ def send_json(sock, data):
 def recv_action(sock):
     return struct.unpack(">I", sock.recv(4))[0]
 
+def try_recv_action(sock):
+    """Drain all pending actions, return the latest one or None if nothing ready."""
+    action = None
+    while True:
+        ready, _, _ = select.select([sock], [], [], 0)
+        if not ready:
+            break
+        data = sock.recv(4)
+        if len(data) < 4:
+            break
+        action = struct.unpack(">I", data)[0]
+    return action
+
 def make_state():
     return {"done": False, "stuck": False, "stuck_steps": 0, "last_completion": 1.0}
 
@@ -84,6 +112,8 @@ def _draw_overlay(snap1, snap2, s1, s2):
         gui.draw_text((tx, ty), 0xFFFFFFFF, f"    speed: {snap['speed']:.1f}  offroad: {snap['is_offroad']}  done: {s['done']}  stuck: {s['stuck']}")
         ty += lh
 
+last_actions = {0: 0, 1: 0}
+
 SAVE_STATE = pick_save_state()
 mem1, mem2 = GameMemory(player_id=0), GameMemory(player_id=1)
 act1, act2 = ActionSpace(use_items=False), ActionSpace(use_items=False)
@@ -98,7 +128,7 @@ print("[DolphinEnv] Startup complete, connected to training process.")
 
 @event.on_frameadvance
 def on_frame():
-    global frame_counter, initialized, s1, s2, SAVE_STATE, _last_snap1, _last_snap2
+    global frame_counter, initialized, s1, s2, SAVE_STATE, _last_snap1, _last_snap2, last_actions
 
     if not initialized:
         savestate.load_from_file(SAVE_STATE)
@@ -145,8 +175,10 @@ def on_frame():
             s["stuck"] = False
 
         send_json(sock, {"snapshot": snap, "done": False, "reset": False})
-        action_idx = recv_action(sock)
-        act.apply(action_idx, ctrl_id)
+        new_action = try_recv_action(sock)
+        if new_action is not None:
+            last_actions[ctrl_id] = new_action
+        act.apply(last_actions[ctrl_id], ctrl_id)
 
     p1_terminal = s1["done"] or s1["stuck"]
     p2_terminal = s2["done"] or s2["stuck"]
@@ -154,6 +186,8 @@ def on_frame():
     if p1_terminal and p2_terminal:
             global episode_count
             episode_count += 1
+            save_episode_count()
+            print(f"[DEBUG] DolphinEnv episodecount incremented: {episode_count}")
             SAVE_STATE = pick_save_state()
             savestate.load_from_file(SAVE_STATE)
             send_json(sock1, {"reset": True, "stuck": s1["stuck"]})

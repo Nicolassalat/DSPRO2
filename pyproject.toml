@@ -3,13 +3,16 @@ name = "dspro2"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "ipywidgets>=8.1.8",
     "matplotlib>=3.10.8",
     "pillow>=12.2.0",
     "py7zr>=1.1.0",
     "pywin32>=311",
+    "tensorboard>=2.20.0",
+    "torch==2.11.0+cu128",
+    "torchvision==0.26.0+cu128",
     "windows-capture>=1.5.0",
 ]
 
@@ -17,3 +20,13 @@ dependencies = [
 dev = [
     "ipykernel>=7.2.0",
 ]
+
+[tool.uv]
+index-strategy = "unsafe-best-match"
+
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/cu128"
+default = true
+
+[[tool.uv.index]]
+url = "https://pypi.org/simple"

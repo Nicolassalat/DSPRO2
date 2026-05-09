@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import layers.noisy_linear as NoisyLinear
+from layers.noisy_linear import NoisyLinear
 
 class ValueStream(nn.Module):
     def __init__(self, cnn_output_dim):

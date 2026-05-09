@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from base_encoder import BaseEncoder
-
+from encoders.base_encoder import BaseEncoder
 class ResidualBlock(nn.Module):
     """
     The non-linear and spectral normalization performing element-wise operations for Impala CNN block

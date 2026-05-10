@@ -196,7 +196,7 @@ class NeuralAgent:
         self.writer.add_scalar("train/loss", loss.item(), self.steps_done)
         self.writer.add_scalar("train/mean_q", current_q.mean().item(), self.steps_done)
 
-        if self.steps_done % 500 == 0:
+        if self.steps_done % 1000 == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
             self.save_model()
 

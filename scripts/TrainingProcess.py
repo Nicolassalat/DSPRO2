@@ -1,4 +1,6 @@
 # TrainingProcess.py
+from collections import deque
+import numpy as np
 import socket, struct, json, threading, os, time, random
 
 from DolphinCapture import DolphinCapture
@@ -11,6 +13,15 @@ PORT_P2    = 55002
 READY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "training_ready.txt")
 
 agent = NeuralAgent(num_actions=14)
+FRAME_STACK = 4
+frame_buffers = {1: deque(maxlen=FRAME_STACK), 2: deque(maxlen=FRAME_STACK)}
+
+def get_stacked_frame(player_id, new_frame):
+    buf = frame_buffers[player_id]
+    buf.append(new_frame)           # new_frame shape: [H, W] or [1, H, W]
+    while len(buf) < FRAME_STACK:   # pad with copies at episode start
+        buf.append(new_frame)
+    return np.stack(list(buf), axis=0)  # → [4, H, W]
 
 def load_episode_offset():
     state_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "training_state.json")
@@ -49,7 +60,6 @@ def player_loop(player_id, conn):
     episode_steps = 0
     episode_num = load_episode_offset() + 1
 
-
     while True:
         try:
             msg = recv_json(conn)
@@ -64,8 +74,10 @@ def player_loop(player_id, conn):
             stuck = msg.get("stuck", False)
             r = compute_reward({}, progress_delta=0.0, done=not stuck, stuck=stuck)
             episode_reward += r
+            frame_buffers[player_id].clear()
             frame = cap()
-            agent.step(player_id, frame, r, terminal=True)  # <-- push terminal transition
+            stacked = get_stacked_frame(player_id, frame)
+            agent.step(player_id, stacked, r, terminal=True)
             print(f"[TrainingProcess] P{player_id} episode {episode_num} end. stuck={stuck} total_reward={episode_reward:.2f}")
             agent.writer.add_scalar(f"episode/P{player_id}_reward", episode_reward, episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_length", episode_steps, episode_num)
@@ -83,7 +95,8 @@ def player_loop(player_id, conn):
             r = compute_reward(snap, progress_delta=0.0, done=True, stuck=False)
             episode_reward += r
             frame = cap()
-            agent.step(player_id, frame, r, terminal=True)
+            stacked = get_stacked_frame(player_id, frame)
+            agent.step(player_id, stacked, r, terminal=True)
             continue
 
         snap = msg["snapshot"]
@@ -94,7 +107,8 @@ def player_loop(player_id, conn):
         r = compute_reward(snap, progress_delta, done=False, stuck=False)
         episode_reward += r
         episode_steps += 1
-        action_idx = agent.step(player_id, frame, r, terminal=False)
+        stacked = get_stacked_frame(player_id, frame)
+        action_idx = agent.step(player_id, stacked, r, terminal=False)
         if action_idx is None:
             action_idx = random.randrange(agent.num_actions)
         send_action(conn, action_idx)

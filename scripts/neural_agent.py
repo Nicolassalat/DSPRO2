@@ -17,6 +17,7 @@ from networks.btr import BTRNetwork
 FRAME_WIDTH = 140
 FRAME_HEIGHT = 114
 NUM_ACTIONS = 14
+FRAME_STACK = 4
 
 
 class ReplayBuffer:
@@ -49,7 +50,7 @@ class NeuralAgent:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.num_actions = num_actions
         # Use BTRNetwork as the policy network
-        input_channels = 1  # Grayscale frames
+        input_channels = FRAME_STACK  # Stacking 4 Grayscale frames to capture the temporal dynamics
         input_shape = (FRAME_HEIGHT, FRAME_WIDTH)
         features_dim = 256
         channel_list = [32, 64, 64]
@@ -101,10 +102,7 @@ class NeuralAgent:
         torch.save(checkpoint, self.model_path)
 
     def _frame_to_tensor(self, frame) -> torch.Tensor:
-        if frame.mode != "L":
-            frame = frame.convert("L")
-        data = torch.from_numpy(np.array(frame, dtype=np.float32))
-        return data.unsqueeze(0)
+        return torch.from_numpy(np.array(frame, dtype=np.float32))  # → [4, H, W]
 
     def select_action(self, frame) -> int:
         if frame is None:

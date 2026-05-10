@@ -43,4 +43,4 @@ def compute_reward(snapshot: dict, progress_delta: float, done: bool, stuck: boo
     if snapshot["wall_collide"] > 0:
         reward -= 0.2
 
-    return reward
+    return reward / 10

@@ -16,7 +16,7 @@ from networks.btr import BTRNetwork
 
 FRAME_WIDTH = 140
 FRAME_HEIGHT = 114
-NUM_ACTIONS = 14
+NUM_ACTIONS = 15
 FRAME_STACK = 4
 
 

@@ -12,7 +12,7 @@ PORT_P1    = 55001
 PORT_P2    = 55002
 READY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "training_ready.txt")
 
-agent = NeuralAgent(num_actions=14)
+agent = NeuralAgent(num_actions=15)
 FRAME_STACK = 4
 frame_buffers = {1: deque(maxlen=FRAME_STACK), 2: deque(maxlen=FRAME_STACK)}
 

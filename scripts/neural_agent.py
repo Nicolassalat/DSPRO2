@@ -41,7 +41,7 @@ class NeuralAgent:
     def __init__(
         self,
         num_actions: int = NUM_ACTIONS,
-        replay_capacity: int = 100000,
+        replay_capacity: int = 20000,
         batch_size: int = 32,
         gamma: float = 0.99,
         lr: float = 1e-4,
@@ -141,7 +141,7 @@ class NeuralAgent:
             action = self.select_action(frame)
             self.last_state[player_id] = state
             self.last_action[player_id] = action
-            if self.steps_done % 16 == 0:
+            if self.steps_done % 64 == 0:
                 self.optimize_model()
             return action
 

@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.join(os.getcwd(), "scripts"))
 sys.path.insert(0, os.getcwd())
 
 from dolphin import event, savestate
-#from dolphin import gui
+from dolphin import gui
 from game_memory import GameMemory
 from actions import ActionSpace
 
@@ -95,6 +95,7 @@ def try_recv_action(sock):
 def make_state():
     return {"done": False, "stuck": False, "stuck_steps": 0, "last_completion": 1.0}
 
+"""
 def _draw_overlay(snap1, snap2, s1, s2):
     mx, my = 10.0, 10.0
     lh, pad, bw = 20.0, 8.0, 500.0
@@ -111,6 +112,7 @@ def _draw_overlay(snap1, snap2, s1, s2):
         ty += lh
         gui.draw_text((tx, ty), 0xFFFFFFFF, f"    speed: {snap['speed']:.1f}  offroad: {snap['is_offroad']}  done: {s['done']}  stuck: {s['stuck']}")
         ty += lh
+"""
 
 last_actions = {0: 0, 1: 0}
 
@@ -139,6 +141,9 @@ def on_frame():
     # For debugging: draw an overlay with progress and status info
     #if _last_snap1 and _last_snap2:
     #    _draw_overlay(_last_snap1, _last_snap2, s1, s2)
+
+    for act, ctrl_id in [(act1, 0), (act2, 1)]:
+        act.apply(last_actions[ctrl_id], ctrl_id)
 
     frame_counter += 1
     if frame_counter % FRAMESKIP != 0:
@@ -178,7 +183,8 @@ def on_frame():
         new_action = try_recv_action(sock)
         if new_action is not None:
             last_actions[ctrl_id] = new_action
-        act.apply(last_actions[ctrl_id], ctrl_id)
+        gui.draw_text((10, 30 + ctrl_id * 20), 0xFFFFFFFF, f"P{ctrl_id + 1}: {act.get_action_name(last_actions[ctrl_id])}")
+
 
     p1_terminal = s1["done"] or s1["stuck"]
     p2_terminal = s2["done"] or s2["stuck"]

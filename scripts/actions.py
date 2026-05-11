@@ -87,7 +87,7 @@ ACTION_TABLE: list[Action] = [
 
 
     # Do nothing
-    Action("nothing"),                                                                  # 17
+    Action("nothing"),                                                                  # 14
 ]
 # fmt: on
 

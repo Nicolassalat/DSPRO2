@@ -46,7 +46,7 @@ def recv_json(sock):
         data += sock.recv(length - len(data))
     return json.loads(data.decode())
 
-def make_capture(player_id, retries=20, delay=10.0):
+def make_capture(player_id, retries=20, delay=1.0):
     for i in range(retries):
         try:
             return DolphinCapture(player_id=player_id)
@@ -60,6 +60,7 @@ def player_loop(player_id, conn):
     last_rc = 1.0
     episode_reward = 0.0
     episode_steps = 0
+    start_rc = None  # add this
     episode_num = load_episode_offset() + 1
 
     while True:
@@ -86,12 +87,13 @@ def player_loop(player_id, conn):
             agent.writer.add_scalar(f"episode/P{player_id}_reward", episode_reward, episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_length", episode_steps, episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_stuck", int(stuck), episode_num)
-            agent.writer.add_scalar(f"episode/P{player_id}_progress", last_rc, episode_num)
+            agent.writer.add_scalar(f"episode/P{player_id}_progress", last_rc - (start_rc or 1.0), episode_num)
             agent.writer.add_scalars("episode/reward", {f"P{player_id}": episode_reward}, episode_num)
             episode_num += 1
             last_rc = 1.0
             episode_reward = 0.0
             episode_steps = 0
+            start_rc = None
             continue
 
         if msg.get("done"):
@@ -107,6 +109,8 @@ def player_loop(player_id, conn):
         snap = msg["snapshot"]
         frame = cap()
         rc = snap["race_completion"]
+        if start_rc is None:
+            start_rc = rc
         progress_delta = rc - last_rc
         last_rc = rc
         r = compute_reward(snap, progress_delta, done=False, stuck=False)

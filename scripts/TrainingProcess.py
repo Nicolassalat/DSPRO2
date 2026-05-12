@@ -62,6 +62,8 @@ def player_loop(player_id, conn):
     episode_steps = 0
     start_rc = None  # add this
     episode_num = load_episode_offset() + 1
+    action_counts = [0] * 15
+
 
     while True:
         try:
@@ -88,7 +90,11 @@ def player_loop(player_id, conn):
             agent.writer.add_scalar(f"episode/P{player_id}_length", episode_steps, episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_stuck", int(stuck), episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_progress", last_rc - (start_rc or 1.0), episode_num)
+            agent.writer.add_scalar(f"episode/P{player_id}_reward_per_step", episode_reward / max(episode_steps, 1), episode_num)
             agent.writer.add_scalars("episode/reward", {f"P{player_id}": episode_reward}, episode_num)
+            for i, count in enumerate(action_counts):
+                agent.writer.add_scalar(f"actions/P{player_id}_{i}", count, episode_num)
+            action_counts = [0] * 15
             episode_num += 1
             last_rc = 1.0
             episode_reward = 0.0
@@ -122,6 +128,7 @@ def player_loop(player_id, conn):
         action_idx = agent.step(player_id, stacked, r, terminal=False)
         if action_idx is None:
             action_idx = random.randrange(agent.num_actions)
+        action_counts[action_idx] += 1
         send_action(conn, action_idx)
 
 

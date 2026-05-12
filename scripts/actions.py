@@ -81,9 +81,9 @@ ACTION_TABLE: list[Action] = [
 
 
     # ── Use Item + Accel + Steer (3 levels) ──────────────────────────────
-    #Action("item_center",        a_button=True,  l_button=True, stick_x=STEER_CENTER),  # 14
-    #Action("item_left",          a_button=True,  l_button=True, stick_x=STEER_LEFT),    # 15
-    #Action("item_right",         a_button=True,  l_button=True, stick_x=STEER_RIGHT),   # 16
+    #Action("item_center",        a_button=True,  l_button=True, stick_x=STEER_CENTER),  # None
+    #Action("item_left",          a_button=True,  l_button=True, stick_x=STEER_LEFT),    # None
+    #Action("item_right",         a_button=True,  l_button=True, stick_x=STEER_RIGHT),   # None
 
 
     # Do nothing

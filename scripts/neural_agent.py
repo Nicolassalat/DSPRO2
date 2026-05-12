@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
+import pynvml
 
 import copy
 import sys
@@ -197,6 +198,13 @@ class NeuralAgent:
         if self.steps_done % 1000 == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
             self.save_model()
+            try:
+                pynvml.nvmlInit()
+                handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+                temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+                self.writer.add_scalar("gpu/gpu_temp", temp, self.steps_done)
+            except:
+                pass
 
     def close(self):
         self.writer.close()

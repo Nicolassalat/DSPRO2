@@ -4,7 +4,7 @@ import numpy as np
 import socket, struct, json, threading, os, time, random
 
 from DolphinCapture import DolphinCapture
-from RewardFunction import compute_reward
+from RewardFunction import simple_reward, advanced_reward
 from neural_agent import NeuralAgent
 
 HOST       = "127.0.0.1"
@@ -18,10 +18,13 @@ ACTION_NAMES = [
     "brake_center", "brake_left", "brake_right",
     "nothing"
 ]
+USE_ADVANCED_REWARD = True
+
 
 agent = NeuralAgent(num_actions=15)
 FRAME_STACK = 4
 frame_buffers = {1: deque(maxlen=FRAME_STACK), 2: deque(maxlen=FRAME_STACK)}
+compute_reward = advanced_reward if USE_ADVANCED_REWARD else simple_reward
 
 def get_stacked_frame(player_id, new_frame):
     if new_frame is None:

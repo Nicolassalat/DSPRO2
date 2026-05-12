@@ -7,9 +7,9 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "ipywidgets>=8.1.8",
     "matplotlib>=3.10.8",
+    "nvidia-ml-py>=13.595.45",
     "pillow>=12.2.0",
     "py7zr>=1.1.0",
-    "pynvml>=13.0.1",
     "pywin32>=311",
     "tensorboard>=2.20.0",
     "torch==2.11.0+cu128",

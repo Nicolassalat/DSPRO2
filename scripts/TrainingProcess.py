@@ -11,6 +11,13 @@ HOST       = "127.0.0.1"
 PORT_P1    = 55001
 PORT_P2    = 55002
 READY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "training_ready.txt")
+ACTION_NAMES = [
+    "accel_center", "accel_left", "accel_right",
+    "drift_hard_left", "drift_soft_left", "drift_center", "drift_soft_right", "drift_hard_right",
+    "wheelie_center", "wheelie_left", "wheelie_right",
+    "brake_center", "brake_left", "brake_right",
+    "nothing"
+]
 
 agent = NeuralAgent(num_actions=15)
 FRAME_STACK = 4
@@ -93,7 +100,7 @@ def player_loop(player_id, conn):
             agent.writer.add_scalar(f"episode/P{player_id}_reward_per_step", episode_reward / max(episode_steps, 1), episode_num)
             agent.writer.add_scalars("episode/reward", {f"P{player_id}": episode_reward}, episode_num)
             for i, count in enumerate(action_counts):
-                agent.writer.add_scalar(f"actions/P{player_id}_{i}", count, episode_num)
+                agent.writer.add_scalar(f"actions/P{player_id}_{ACTION_NAMES[i]}", count, episode_num)
             action_counts = [0] * 15
             episode_num += 1
             last_rc = 1.0

@@ -202,7 +202,7 @@ class NeuralAgent:
                 pynvml.nvmlInit()
                 handle = pynvml.nvmlDeviceGetHandleByIndex(0)
                 temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
-                self.writer.add_scalar("gpu/gpu_temp", temp, self.steps_done)
+                self.writer.add_scalar("crash_debug/gpu_temp", temp, self.steps_done)
             except:
                 pass
 

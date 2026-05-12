@@ -109,9 +109,13 @@ class NeuralAgent:
         if frame is None:
             return random.randrange(self.num_actions)
 
-        state = self._frame_to_tensor(frame).to(self.device)
         self.steps_done += 1
 
+        eps = max(0.0, 1.0 - self.steps_done / 10000)
+        if random.random() < eps:
+            return random.randrange(self.num_actions)
+
+        state = self._frame_to_tensor(frame).to(self.device)
         with torch.no_grad():
             q_values, _ = self.policy_net(state.unsqueeze(0))
             q_mean = q_values.mean(dim=1)  # Average over taus

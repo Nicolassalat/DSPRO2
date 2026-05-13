@@ -1,3 +1,4 @@
+# neural_agent.py
 import os
 import random
 import threading
@@ -9,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 import pynvml
+import pickle
 
 import copy
 import sys
@@ -94,6 +96,15 @@ class NeuralAgent:
             except Exception as exc:
                 print(f"[NeuralAgent] Failed to load model: {exc}")
 
+        buffer_path = self.model_path.replace(".pth", "_buffer.pkl")
+        if os.path.exists(buffer_path):
+            try:
+                with open(buffer_path, "rb") as f:
+                    self.replay_buffer.buffer = pickle.load(f)
+                print(f"[NeuralAgent] Loaded replay buffer ({len(self.replay_buffer)} transitions)")
+            except Exception as exc:
+                print(f"[NeuralAgent] Failed to load replay buffer: {exc}")
+
     def save_model(self):
         checkpoint = {
             "policy_net": self.policy_net.state_dict(),
@@ -102,6 +113,9 @@ class NeuralAgent:
         }
         torch.save(checkpoint, self.model_path)
 
+        buffer_path = self.model_path.replace(".pth", "_buffer.pkl")
+        with open(buffer_path, "wb") as f:
+            pickle.dump(self.replay_buffer.buffer, f)
     def _frame_to_tensor(self, frame) -> torch.Tensor:
         return torch.from_numpy(np.array(frame, dtype=np.float32))  # → [4, H, W]
 

@@ -19,7 +19,11 @@ def advanced_reward(snapshot: dict, progress_delta: float, done: bool, stuck: bo
 
     # Core signal: progress + speed bonus (decoupled)
     reward += progress_delta * 100.0
-    reward += snapshot["speed"] / 100.0
+    
+    speed_ratio = snapshot["speed"] / snapshot["soft_speed_limit"] if snapshot["soft_speed_limit"] > 0 else 0.0
+    reward += speed_ratio * 0.1
+    if speed_ratio < 0.2:
+        reward -= 0.1
 
     # Boost panel bonus — rewards hitting boost panels instead of driving around them
     if snapshot["mush_and_boost"] > 0:

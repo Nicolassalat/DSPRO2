@@ -15,29 +15,31 @@ PORT_P2      = 55002
 FRAMESKIP    = 4
 STUCK_STEPS  = 225
 STUCK_THRESH = 0.01
+WINDOW_SIZE = 30
+REQUIRED_FINISH_RATE = 0.65
+COMPLETIONS_TO_UNLOCK = 75
+
 
 STATES_BASE = os.path.join(os.getcwd(), "..", "save_states") if os.path.basename(os.getcwd()).lower() == "scripts" else os.path.join(os.getcwd(), "save_states")
 STATE_FILE = os.path.join(os.getcwd(), "training_state.json")
-# Track progression — number of episodes before introducing each new track
-EPISODES_LC_ONLY  = 3000   # episodes 0-2999: LC only
-EPISODES_ADD_DC   = 3000   # episodes 3000-5999: LC + DC
-EPISODES_ADD_DDR  = 3000   # episodes 6000-8999: LC + DC + DDR
-# episodes 9000+: all four tracks
 
-def load_episode_count():
+def load_state():
     if os.path.exists(STATE_FILE):
         try:
             with open(STATE_FILE) as f:
-                return json.load(f).get("episode_count", 0)
+                data = json.load(f)
+                return (data.get("episode_count", 0), 
+                        data.get("track_completions", {"lc": 0, "dc": 0, "ddr": 0, "dksc": 0}),
+                        data.get("track_recent", {"lc": [], "dc": [], "ddr": [], "dksc": []}))
         except Exception:
-            return 0
-    return 0
+            pass
+    return 0, {"lc": 0, "dc": 0, "ddr": 0, "dksc": 0}, {"lc": [], "dc": [], "ddr": [], "dksc": []}
 
-def save_episode_count():
+def save_state():
     with open(STATE_FILE, "w") as f:
-        json.dump({"episode_count": episode_count}, f)
+        json.dump({"episode_count": episode_count, "track_completions": track_completions, "track_recent": track_recent}, f)
 
-episode_count = load_episode_count()
+episode_count, track_completions, track_recent = load_state()
 
 
 
@@ -49,14 +51,18 @@ TRACK_FOLDERS = {
 }
 
 def get_active_tracks():
-    if episode_count < EPISODES_LC_ONLY:
+    if track_completions["lc"] < COMPLETIONS_TO_UNLOCK:
         return ["lc"]
-    elif episode_count < EPISODES_LC_ONLY + EPISODES_ADD_DC:
+    elif track_completions["dc"] < COMPLETIONS_TO_UNLOCK:
         return ["lc", "dc"]
-    elif episode_count < EPISODES_LC_ONLY + EPISODES_ADD_DC + EPISODES_ADD_DDR:
+    elif track_completions["ddr"] < COMPLETIONS_TO_UNLOCK:
         return ["lc", "dc", "ddr"]
     else:
         return ["lc", "dc", "ddr", "dksc"]
+    
+def get_newest_track():
+    active = get_active_tracks()
+    return active[-1]
 
 def pick_save_state():
     active = get_active_tracks()
@@ -190,9 +196,21 @@ def on_frame():
     p2_terminal = s2["done"] or s2["stuck"]
 
     if p1_terminal and p2_terminal:
-            global episode_count
+            global episode_count, track_completions, track_recent
             episode_count += 1
-            save_episode_count()
+            current_track = os.path.basename(os.path.dirname(SAVE_STATE))
+            if current_track == get_newest_track():
+                finished = 1 if (s1["done"] or s2["done"]) else 0
+                track_recent[current_track].append(finished)
+                if len(track_recent[current_track]) > WINDOW_SIZE:
+                    track_recent[current_track].pop(0)
+                recent = track_recent[current_track]
+                if len(recent) == WINDOW_SIZE:
+                    finish_rate = sum(recent) / WINDOW_SIZE
+                    if finish_rate >= REQUIRED_FINISH_RATE:
+                        track_completions[current_track] = COMPLETIONS_TO_UNLOCK
+                        print(f"[DolphinEnv] {current_track} unlocked next track! finish_rate={finish_rate:.1%}")
+            save_state()
             print(f"[DEBUG] DolphinEnv episodecount incremented: {episode_count}")
             SAVE_STATE = pick_save_state()
             savestate.load_from_file(SAVE_STATE)

@@ -27,7 +27,9 @@ training_state.json
 scripts/training_state.json
 crash_log.txt
 
-# agent file
+# agent files
 agent_model.pth
+agent_model_buffer.pkl
+
 
 !runs_backup/**

@@ -87,6 +87,7 @@ def player_loop(player_id, conn):
 
         if msg.get("reset"):
             stuck = msg.get("stuck", False)
+            track = msg.get("track", "unknown")
             r = compute_reward({}, progress_delta=0.0, done=not stuck, stuck=stuck)
             episode_reward += r
             frame_buffers[player_id].clear()
@@ -102,6 +103,8 @@ def player_loop(player_id, conn):
             agent.writer.add_scalar(f"episode/P{player_id}_progress", last_rc - (start_rc or 1.0), episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_reward_per_step", episode_reward / max(episode_steps, 1), episode_num)
             agent.writer.add_scalars("episode/reward", {f"P{player_id}": episode_reward}, episode_num)
+            agent.writer.add_scalar(f"episode/P{player_id}_reward_{track}", episode_reward, episode_num)     
+            agent.writer.add_scalars(f"episode/reward_{track}", {f"P{player_id}": episode_reward}, episode_num)
             for i, count in enumerate(action_counts):
                 agent.writer.add_scalar(f"actions/P{player_id}_{ACTION_NAMES[i]}", count, episode_num)
             action_counts = [0] * 15

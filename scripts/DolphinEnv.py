@@ -214,8 +214,8 @@ def on_frame():
             print(f"[DEBUG] DolphinEnv episodecount incremented: {episode_count}")
             SAVE_STATE = pick_save_state()
             savestate.load_from_file(SAVE_STATE)
-            send_json(sock1, {"reset": True, "stuck": s1["stuck"]})
-            send_json(sock2, {"reset": True, "stuck": s2["stuck"]})
+            send_json(sock1, {"reset": True, "stuck": s1["stuck"], "track": current_track})
+            send_json(sock2, {"reset": True, "stuck": s2["stuck"], "track": current_track})
             s1, s2 = make_state(), make_state()
             frame_counter = 0
             print(f"[DolphinEnv] Episode reset. episode={episode_count} tracks={get_active_tracks()}")

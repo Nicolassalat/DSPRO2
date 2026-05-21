@@ -44,7 +44,7 @@ class NeuralAgent:
     def __init__(
         self,
         num_actions: int = NUM_ACTIONS,
-        replay_capacity: int = 20000,
+        replay_capacity: int = 35000,
         batch_size: int = 32,
         gamma: float = 0.99,
         lr: float = 1e-4,
@@ -215,7 +215,7 @@ class NeuralAgent:
 
         if self.steps_done % 1000 == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
-            self.save_model()
+            threading.Thread(target=self.save_model, daemon=True).start()
             try:
                 pynvml.nvmlInit()
                 handle = pynvml.nvmlDeviceGetHandleByIndex(0)

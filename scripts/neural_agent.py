@@ -1,6 +1,7 @@
 # neural_agent.py
 import os
 import random
+import shutil
 import threading
 from collections import deque
 
@@ -52,8 +53,7 @@ class NeuralAgent:
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.num_actions = num_actions
-        # Use BTRNetwork as the policy network
-        input_channels = FRAME_STACK  # Stacking 4 Grayscale frames to capture the temporal dynamics
+        input_channels = FRAME_STACK
         input_shape = (FRAME_HEIGHT, FRAME_WIDTH)
         features_dim = 256
         channel_list = [32, 64, 64]
@@ -81,7 +81,8 @@ class NeuralAgent:
         self.last_state = {1: None, 2: None}
         self.last_action = {1: None, 2: None}
         self.model_path = model_path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "agent_model.pth")
-        self.writer = SummaryWriter(log_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "runs"))
+        self.project_root = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+        self.writer = SummaryWriter(log_dir=os.path.join(self.project_root, "runs"))
         self.load_model()
         self.episode_count = 0
 
@@ -112,10 +113,57 @@ class NeuralAgent:
             "steps_done": self.steps_done,
         }
         torch.save(checkpoint, self.model_path)
-
         buffer_path = self.model_path.replace(".pth", "_buffer.pkl")
         with open(buffer_path, "wb") as f:
             pickle.dump(self.replay_buffer.buffer, f)
+
+    def save_snapshot(self):
+        """Snapshot the full run to runs_backup/run_N/ in a background thread."""
+        threading.Thread(target=self._do_snapshot, daemon=True).start()
+
+    def _do_snapshot(self):
+        # Save latest weights to disk first
+        self.save_model()
+
+        # Determine next run number
+        backup_dir = os.path.join(self.project_root, "runs_backup")
+        os.makedirs(backup_dir, exist_ok=True)
+        existing_nums = []
+        for d in os.listdir(backup_dir):
+            if d.startswith("run"):
+                try:
+                    existing_nums.append(int(d[3:]))
+                except ValueError:
+                    pass
+        run_num = max(existing_nums, default=0) + 1
+        run_dir = os.path.join(backup_dir, f"run{run_num}")
+        os.makedirs(run_dir, exist_ok=True)
+
+        # Copy model files
+        shutil.copy2(self.model_path, os.path.join(run_dir, "agent_model.pth"))
+        buffer_path = self.model_path.replace(".pth", "_buffer.pkl")
+        if os.path.exists(buffer_path):
+            shutil.copy2(buffer_path, os.path.join(run_dir, "agent_model_buffer.pkl"))
+
+        # Copy crash log
+        crash_log = os.path.join(self.project_root, "crash_log.txt")
+        if os.path.exists(crash_log):
+            shutil.copy2(crash_log, os.path.join(run_dir, "crash_log.txt"))
+
+        # Copy TensorBoard runs/
+        runs_src = os.path.join(self.project_root, "runs")
+        if os.path.exists(runs_src):
+            shutil.copytree(runs_src, os.path.join(run_dir, "runs"), dirs_exist_ok=True)
+
+        # Copy training_state.json
+        state_src = os.path.join(self.project_root, "scripts", "training_state.json")
+        if os.path.exists(state_src):
+            scripts_dst = os.path.join(run_dir, "scripts")
+            os.makedirs(scripts_dst, exist_ok=True)
+            shutil.copy2(state_src, os.path.join(scripts_dst, "training_state.json"))
+
+        print(f"[NeuralAgent] Snapshot saved to runs_backup/run{run_num}/")
+
     def _frame_to_tensor(self, frame) -> torch.Tensor:
         return torch.from_numpy(np.array(frame, dtype=np.float32))  # → [4, H, W]
 
@@ -132,7 +180,7 @@ class NeuralAgent:
         state = self._frame_to_tensor(frame).to(self.device)
         with torch.no_grad():
             q_values, _ = self.policy_net(state.unsqueeze(0))
-            q_mean = q_values.mean(dim=1)  # Average over taus
+            q_mean = q_values.mean(dim=1)
             return int(q_mean.argmax(dim=1).item())
 
     def step(self, player_id: int, frame, reward: float, terminal: bool = False) -> int | None:
@@ -177,17 +225,14 @@ class NeuralAgent:
         action_batch = torch.tensor(actions, dtype=torch.int64, device=self.device).unsqueeze(1)
         reward_batch = torch.tensor(rewards, dtype=torch.float32, device=self.device).unsqueeze(1)
         done_batch = torch.tensor(dones, dtype=torch.float32, device=self.device).unsqueeze(1)
-
         next_state_batch = torch.stack(next_states).to(self.device)
 
-        # current quantile Q-values: (B, n_taus)
         self.policy_net.reset_noise()
         current_q_values, taus = self.policy_net(state_batch)
         current_q = current_q_values.gather(
             2, action_batch.unsqueeze(1).expand(-1, current_q_values.shape[1], -1)
         ).squeeze(2)  # (B, n_taus)
 
-        # target quantile Q-values: (B, n_taus_target) — Double DQN
         self.target_net.reset_noise()
         with torch.no_grad():
             policy_next_q, _ = self.policy_net(next_state_batch)
@@ -195,10 +240,9 @@ class NeuralAgent:
             next_q_values_batch, _ = self.target_net(next_state_batch)
             next_q = next_q_values_batch.gather(
                 2, best_actions.unsqueeze(1).expand(-1, next_q_values_batch.shape[1], -1)
-            ).squeeze(2)  # (B, n_taus_target)
+            ).squeeze(2)
             target_q = (reward_batch + self.gamma * next_q * (1.0 - done_batch)).detach()
 
-        # quantile Huber loss
         td_errors = target_q.unsqueeze(1) - current_q.unsqueeze(2)  # (B, n_taus, n_taus_target)
         huber = F.huber_loss(current_q.unsqueeze(2).expand_as(td_errors),
                              target_q.unsqueeze(1).expand_as(td_errors),

@@ -30,7 +30,7 @@ def get_stacked_frame(player_id, new_frame):
     if new_frame is None:
         return None
     buf = frame_buffers[player_id]
-    buf.append(np.array(new_frame, dtype=np.float32))  # convert PIL → numpy here
+    buf.append(np.array(new_frame, dtype=np.float32))
     while len(buf) < FRAME_STACK:
         buf.append(np.array(new_frame, dtype=np.float32))
     return np.stack(list(buf), axis=0)  # → [4, H, W]
@@ -70,10 +70,9 @@ def player_loop(player_id, conn):
     last_rc = 1.0
     episode_reward = 0.0
     episode_steps = 0
-    start_rc = None  # add this
+    start_rc = None
     episode_num = load_episode_offset() + 1
     action_counts = [0] * 15
-
 
     while True:
         try:
@@ -88,6 +87,7 @@ def player_loop(player_id, conn):
         if msg.get("reset"):
             stuck = msg.get("stuck", False)
             track = msg.get("track", "unknown")
+            snapshot = msg.get("snapshot", False)
             r = compute_reward({}, progress_delta=0.0, done=not stuck, stuck=stuck)
             episode_reward += r
             frame_buffers[player_id].clear()
@@ -103,10 +103,16 @@ def player_loop(player_id, conn):
             agent.writer.add_scalar(f"episode/P{player_id}_progress", last_rc - (start_rc or 1.0), episode_num)
             agent.writer.add_scalar(f"episode/P{player_id}_reward_per_step", episode_reward / max(episode_steps, 1), episode_num)
             agent.writer.add_scalars("episode/reward", {f"P{player_id}": episode_reward}, episode_num)
-            agent.writer.add_scalar(f"episode/P{player_id}_reward_{track}", episode_reward, episode_num)     
+            agent.writer.add_scalar(f"episode/P{player_id}_reward_{track}", episode_reward, episode_num)
             agent.writer.add_scalars(f"episode/reward_{track}", {f"P{player_id}": episode_reward}, episode_num)
             for i, count in enumerate(action_counts):
                 agent.writer.add_scalar(f"actions/P{player_id}_{ACTION_NAMES[i]}", count, episode_num)
+
+            # Snapshot on track unlock — only trigger once (player 1 owns it)
+            if snapshot and player_id == 1:
+                print(f"[TrainingProcess] New track unlocked — saving snapshot...")
+                agent.save_snapshot()
+
             action_counts = [0] * 15
             episode_num += 1
             last_rc = 1.0

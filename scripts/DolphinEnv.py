@@ -28,12 +28,12 @@ def load_state():
         try:
             with open(STATE_FILE) as f:
                 data = json.load(f)
-                return (data.get("episode_count", 0), 
-                        data.get("track_completions", {"lc": 0, "dc": 0, "ddr": 0, "dksc": 0}),
-                        data.get("track_recent", {"lc": [], "dc": [], "ddr": [], "dksc": []}))
+                return (data.get("episode_count", 0),
+                        data.get("track_completions", {"lc": 0, "mc": 0, "mrw": 0, "dc": 0}),
+                        data.get("track_recent", {"lc": [], "mc": [], "mrw": [], "dc": []}))
         except Exception:
             pass
-    return 0, {"lc": 0, "dc": 0, "ddr": 0, "dksc": 0}, {"lc": [], "dc": [], "ddr": [], "dksc": []}
+    return 0, {"lc": 0, "mc": 0, "mrw": 0, "dc": 0}, {"lc": [], "mc": [], "mrw": [], "dc": []}
 
 def save_state():
     with open(STATE_FILE, "w") as f:
@@ -41,25 +41,23 @@ def save_state():
 
 episode_count, track_completions, track_recent = load_state()
 
-
-
 TRACK_FOLDERS = {
-    "lc":   os.path.join(STATES_BASE, "lc"),
-    "dc":   os.path.join(STATES_BASE, "dc"),
-    "ddr":  os.path.join(STATES_BASE, "ddr"),
-    "dksc": os.path.join(STATES_BASE, "dksc"),
+    "lc":  os.path.join(STATES_BASE, "lc"),
+    "mc":  os.path.join(STATES_BASE, "mc"),
+    "mrw": os.path.join(STATES_BASE, "mrw"),
+    "dc":  os.path.join(STATES_BASE, "dc"),
 }
 
 def get_active_tracks():
     if track_completions["lc"] < COMPLETIONS_TO_UNLOCK:
         return ["lc"]
-    elif track_completions["dc"] < COMPLETIONS_TO_UNLOCK:
-        return ["lc", "dc"]
-    elif track_completions["ddr"] < COMPLETIONS_TO_UNLOCK:
-        return ["lc", "dc", "ddr"]
+    elif track_completions["mc"] < COMPLETIONS_TO_UNLOCK:
+        return ["lc", "mc"]
+    elif track_completions["mrw"] < COMPLETIONS_TO_UNLOCK:
+        return ["lc", "mc", "mrw"]
     else:
-        return ["lc", "dc", "ddr", "dksc"]
-    
+        return ["lc", "mc", "mrw", "dc"]
+
 def get_newest_track():
     active = get_active_tracks()
     return active[-1]
@@ -136,7 +134,7 @@ print("[DolphinEnv] Startup complete, connected to training process.")
 
 @event.on_frameadvance
 def on_frame():
-    global frame_counter, initialized, s1, s2, SAVE_STATE, _last_snap1, _last_snap2, last_actions
+    global frame_counter, initialized, s1, s2, SAVE_STATE, last_actions
 
     if not initialized:
         savestate.load_from_file(SAVE_STATE)
@@ -154,16 +152,12 @@ def on_frame():
     frame_counter += 1
     if frame_counter % FRAMESKIP != 0:
         return
-    
+
     for mem, act, sock, s, ctrl_id in [
         (mem1, act1, sock1, s1, 0),
         (mem2, act2, sock2, s2, 1),
     ]:
         snap = mem.snapshot()
-        if ctrl_id == 0:
-            _last_snap1 = snap
-        else:
-            _last_snap2 = snap
 
         if s["done"]:
             continue
@@ -191,31 +185,34 @@ def on_frame():
             last_actions[ctrl_id] = new_action
         gui.draw_text((10, 30 + ctrl_id * 20), 0xFFFFFFFF, f"P{ctrl_id + 1}: {act.get_action_name(last_actions[ctrl_id])}")
 
-
     p1_terminal = s1["done"] or s1["stuck"]
     p2_terminal = s2["done"] or s2["stuck"]
 
     if p1_terminal and p2_terminal:
-            global episode_count, track_completions, track_recent
-            episode_count += 1
-            current_track = os.path.basename(os.path.dirname(SAVE_STATE))
-            if current_track == get_newest_track():
-                finished = 1 if (s1["done"] or s2["done"]) else 0
-                track_recent[current_track].append(finished)
-                if len(track_recent[current_track]) > WINDOW_SIZE:
-                    track_recent[current_track].pop(0)
-                recent = track_recent[current_track]
-                if len(recent) == WINDOW_SIZE:
-                    finish_rate = sum(recent) / WINDOW_SIZE
-                    if finish_rate >= REQUIRED_FINISH_RATE:
-                        track_completions[current_track] = COMPLETIONS_TO_UNLOCK
-                        print(f"[DolphinEnv] {current_track} unlocked next track! finish_rate={finish_rate:.1%}")
-            save_state()
-            print(f"[DEBUG] DolphinEnv episodecount incremented: {episode_count}")
-            SAVE_STATE = pick_save_state()
-            savestate.load_from_file(SAVE_STATE)
-            send_json(sock1, {"reset": True, "stuck": ..., "track": current_track, "snapshot": True})
-            send_json(sock2, {"reset": True, "stuck": ..., "track": current_track, "snapshot": True})
-            s1, s2 = make_state(), make_state()
-            frame_counter = 0
-            print(f"[DolphinEnv] Episode reset. episode={episode_count} tracks={get_active_tracks()}")
+        global episode_count, track_completions, track_recent
+        episode_count += 1
+        current_track = os.path.basename(os.path.dirname(SAVE_STATE))
+        new_track_unlocked = False
+
+        if current_track == get_newest_track():
+            finished = 1 if (s1["done"] or s2["done"]) else 0
+            track_recent[current_track].append(finished)
+            if len(track_recent[current_track]) > WINDOW_SIZE:
+                track_recent[current_track].pop(0)
+            recent = track_recent[current_track]
+            if len(recent) == WINDOW_SIZE:
+                finish_rate = sum(recent) / WINDOW_SIZE
+                if finish_rate >= REQUIRED_FINISH_RATE:
+                    track_completions[current_track] = COMPLETIONS_TO_UNLOCK
+                    new_track_unlocked = True
+                    print(f"[DolphinEnv] {current_track} mastered! Unlocking next track. finish_rate={finish_rate:.1%}")
+
+        save_state()
+        print(f"[DEBUG] DolphinEnv episode count incremented: {episode_count}")
+        SAVE_STATE = pick_save_state()
+        savestate.load_from_file(SAVE_STATE)
+        send_json(sock1, {"reset": True, "stuck": s1["stuck"], "track": current_track, "snapshot": new_track_unlocked})
+        send_json(sock2, {"reset": True, "stuck": s2["stuck"], "track": current_track, "snapshot": new_track_unlocked})
+        s1, s2 = make_state(), make_state()
+        frame_counter = 0
+        print(f"[DolphinEnv] Episode reset. episode={episode_count} tracks={get_active_tracks()}")

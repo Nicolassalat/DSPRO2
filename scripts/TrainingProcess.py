@@ -18,6 +18,7 @@ ACTION_NAMES = [
     "brake_center", "brake_left", "brake_right",
     "nothing"
 ]
+
 USE_ADVANCED_REWARD = True
 
 
@@ -108,10 +109,10 @@ def player_loop(player_id, conn):
             for i, count in enumerate(action_counts):
                 agent.writer.add_scalar(f"actions/P{player_id}_{ACTION_NAMES[i]}", count, episode_num)
 
-            # Snapshot on track unlock — only trigger once (player 1 owns it)
+            # Snapshot on track unlock — only P1 triggers to avoid double-save
             if snapshot and player_id == 1:
-                print(f"[TrainingProcess] New track unlocked — saving snapshot...")
-                agent.save_snapshot()
+                print(f"[TrainingProcess] New track unlocked after {track} — saving snapshot...")
+                agent.save_snapshot(track)
 
             action_counts = [0] * 15
             episode_num += 1

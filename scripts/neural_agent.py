@@ -86,6 +86,19 @@ class NeuralAgent:
         self.load_model()
         self.episode_count = 0
 
+        # Determine run number once at startup
+        backup_dir = os.path.join(self.project_root, "runs_backup")
+        os.makedirs(backup_dir, exist_ok=True)
+        existing_nums = []
+        for d in os.listdir(backup_dir):
+            if d.startswith("run"):
+                try:
+                    existing_nums.append(int(d[3:]))
+                except ValueError:
+                    pass
+        self.run_num = max(existing_nums, default=0) + 1
+        print(f"[NeuralAgent] This run will be backed up as run{self.run_num}")
+
     def load_model(self):
         if os.path.exists(self.model_path):
             try:
@@ -101,7 +114,12 @@ class NeuralAgent:
         if os.path.exists(buffer_path):
             try:
                 with open(buffer_path, "rb") as f:
-                    self.replay_buffer.buffer = pickle.load(f)
+                    loaded = pickle.load(f)
+                # Handle both list (new format) and deque (old format)
+                if isinstance(loaded, list):
+                    self.replay_buffer.buffer = deque(loaded, maxlen=self.replay_buffer.capacity)
+                else:
+                    self.replay_buffer.buffer = loaded
                 print(f"[NeuralAgent] Loaded replay buffer ({len(self.replay_buffer)} transitions)")
             except Exception as exc:
                 print(f"[NeuralAgent] Failed to load replay buffer: {exc}")
@@ -113,33 +131,29 @@ class NeuralAgent:
             "steps_done": self.steps_done,
         }
         torch.save(checkpoint, self.model_path)
+
+        # Snapshot the deque under lock before pickling to avoid mutation errors
+        with self.lock:
+            buffer_snapshot = list(self.replay_buffer.buffer)
         buffer_path = self.model_path.replace(".pth", "_buffer.pkl")
         with open(buffer_path, "wb") as f:
-            pickle.dump(self.replay_buffer.buffer, f)
+            pickle.dump(buffer_snapshot, f)
 
-    def save_snapshot(self):
-        """Snapshot the full run to runs_backup/run_N/ in a background thread."""
-        threading.Thread(target=self._do_snapshot, daemon=True).start()
+    def save_snapshot(self, track: str):
+        """Snapshot the full run to runs_backup/run{N}/after_{track}/ in a background thread."""
+        threading.Thread(target=self._do_snapshot, args=(track,), daemon=True).start()
 
-    def _do_snapshot(self):
-        # Save latest weights to disk first
+    def _do_snapshot(self, track: str):
+        # Save latest weights + buffer to disk first
         self.save_model()
 
-        # Determine next run number
-        backup_dir = os.path.join(self.project_root, "runs_backup")
-        os.makedirs(backup_dir, exist_ok=True)
-        existing_nums = []
-        for d in os.listdir(backup_dir):
-            if d.startswith("run"):
-                try:
-                    existing_nums.append(int(d[3:]))
-                except ValueError:
-                    pass
-        run_num = max(existing_nums, default=0) + 1
-        run_dir = os.path.join(backup_dir, f"run{run_num}")
+        # Flush TensorBoard before copying
+        self.writer.flush()
+
+        run_dir = os.path.join(self.project_root, "runs_backup", f"run{self.run_num}", f"after_{track}")
         os.makedirs(run_dir, exist_ok=True)
 
-        # Copy model files
+        # Copy model + buffer
         shutil.copy2(self.model_path, os.path.join(run_dir, "agent_model.pth"))
         buffer_path = self.model_path.replace(".pth", "_buffer.pkl")
         if os.path.exists(buffer_path):
@@ -162,7 +176,7 @@ class NeuralAgent:
             os.makedirs(scripts_dst, exist_ok=True)
             shutil.copy2(state_src, os.path.join(scripts_dst, "training_state.json"))
 
-        print(f"[NeuralAgent] Snapshot saved to runs_backup/run{run_num}/")
+        print(f"[NeuralAgent] Snapshot saved to backup_runs/run{self.run_num}/after_{track}/")
 
     def _frame_to_tensor(self, frame) -> torch.Tensor:
         return torch.from_numpy(np.array(frame, dtype=np.float32))  # → [4, H, W]
@@ -173,7 +187,7 @@ class NeuralAgent:
 
         self.steps_done += 1
 
-        eps = max(0.0, 1.0 - self.steps_done / 10000)
+        eps = max(0.0, 1.0 - self.steps_done / 50000)
         if random.random() < eps:
             return random.randrange(self.num_actions)
 

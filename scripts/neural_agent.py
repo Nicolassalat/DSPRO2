@@ -30,6 +30,7 @@ class ReplayBuffer:
         self.buffer = deque(maxlen=capacity)
 
     def push(self, state, action, reward, next_state, done):
+        # state/next_state stored as uint8 CPU tensors to minimise VRAM
         self.buffer.append((state, action, reward, next_state, done))
 
     def sample(self, batch_size):
@@ -45,13 +46,15 @@ class NeuralAgent:
     def __init__(
         self,
         num_actions: int = NUM_ACTIONS,
-        replay_capacity: int = 35000,
+        replay_capacity: int = 50000,
         batch_size: int = 32,
         gamma: float = 0.99,
         lr: float = 1e-4,
         model_path: str | None = None,
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device.type == "cuda":
+            torch.cuda.set_per_process_memory_fraction(0.75)
         self.num_actions = num_actions
         input_channels = FRAME_STACK
         input_shape = (FRAME_HEIGHT, FRAME_WIDTH)
@@ -115,7 +118,6 @@ class NeuralAgent:
             try:
                 with open(buffer_path, "rb") as f:
                     loaded = pickle.load(f)
-                # Handle both list (new format) and deque (old format)
                 if isinstance(loaded, list):
                     self.replay_buffer.buffer = deque(loaded, maxlen=self.replay_buffer.capacity)
                 else:
@@ -132,54 +134,53 @@ class NeuralAgent:
         }
         torch.save(checkpoint, self.model_path)
 
-        # Snapshot the deque under lock before pickling to avoid mutation errors
         with self.lock:
             buffer_snapshot = list(self.replay_buffer.buffer)
+        
         buffer_path = self.model_path.replace(".pth", "_buffer.pkl")
-        with open(buffer_path, "wb") as f:
+        tmp_path = buffer_path + ".tmp"
+        with open(tmp_path, "wb") as f:
             pickle.dump(buffer_snapshot, f)
+        os.replace(tmp_path, buffer_path)
 
     def save_snapshot(self, track: str):
-        """Snapshot the full run to runs_backup/run{N}/after_{track}/ in a background thread."""
         threading.Thread(target=self._do_snapshot, args=(track,), daemon=True).start()
 
     def _do_snapshot(self, track: str):
-        # Save latest weights + buffer to disk first
         self.save_model()
-
-        # Flush TensorBoard before copying
         self.writer.flush()
 
         run_dir = os.path.join(self.project_root, "runs_backup", f"run{self.run_num}", f"after_{track}")
         os.makedirs(run_dir, exist_ok=True)
 
-        # Copy model + buffer
         shutil.copy2(self.model_path, os.path.join(run_dir, "agent_model.pth"))
         buffer_path = self.model_path.replace(".pth", "_buffer.pkl")
         if os.path.exists(buffer_path):
             shutil.copy2(buffer_path, os.path.join(run_dir, "agent_model_buffer.pkl"))
 
-        # Copy crash log
         crash_log = os.path.join(self.project_root, "crash_log.txt")
         if os.path.exists(crash_log):
             shutil.copy2(crash_log, os.path.join(run_dir, "crash_log.txt"))
 
-        # Copy TensorBoard runs/
         runs_src = os.path.join(self.project_root, "runs")
         if os.path.exists(runs_src):
             shutil.copytree(runs_src, os.path.join(run_dir, "runs"), dirs_exist_ok=True)
 
-        # Copy training_state.json
         state_src = os.path.join(self.project_root, "scripts", "training_state.json")
         if os.path.exists(state_src):
             scripts_dst = os.path.join(run_dir, "scripts")
             os.makedirs(scripts_dst, exist_ok=True)
             shutil.copy2(state_src, os.path.join(scripts_dst, "training_state.json"))
 
-        print(f"[NeuralAgent] Snapshot saved to backup_runs/run{self.run_num}/after_{track}/")
+        print(f"[NeuralAgent] Snapshot saved to runs_backup/run{self.run_num}/after_{track}/")
 
     def _frame_to_tensor(self, frame) -> torch.Tensor:
-        return torch.from_numpy(np.array(frame, dtype=np.float32))  # → [4, H, W]
+        # Store as uint8 on CPU — saves ~4x VRAM vs float32
+        return torch.from_numpy(np.array(frame, dtype=np.uint8))  # [4, H, W], CPU
+
+    def _to_float(self, state_tensor: torch.Tensor) -> torch.Tensor:
+        # Convert uint8 CPU → float32 GPU, normalised to [0, 1]
+        return state_tensor.to(self.device, dtype=torch.float32) / 255.0
 
     def select_action(self, frame) -> int:
         if frame is None:
@@ -191,7 +192,7 @@ class NeuralAgent:
         if random.random() < eps:
             return random.randrange(self.num_actions)
 
-        state = self._frame_to_tensor(frame).to(self.device)
+        state = self._to_float(self._frame_to_tensor(frame))
         with torch.no_grad():
             q_values, _ = self.policy_net(state.unsqueeze(0))
             q_mean = q_values.mean(dim=1)
@@ -203,7 +204,8 @@ class NeuralAgent:
                 self._cleanup_episode(player_id)
             return random.randrange(self.num_actions)
 
-        state = self._frame_to_tensor(frame).to(self.device)
+        # Store as uint8 CPU tensor
+        state = self._frame_to_tensor(frame)
         with self.lock:
             if self.last_state[player_id] is not None and self.last_action[player_id] is not None:
                 self.replay_buffer.push(
@@ -235,17 +237,20 @@ class NeuralAgent:
             return
 
         states, actions, rewards, next_states, dones = self.replay_buffer.sample(self.batch_size)
-        state_batch = torch.stack(states).to(self.device)
+
+        # Convert uint8 CPU → float32 GPU, normalised to [0, 1]
+        state_batch = torch.stack([self._to_float(s) for s in states])
+        next_state_batch = torch.stack([self._to_float(s) for s in next_states])
+
         action_batch = torch.tensor(actions, dtype=torch.int64, device=self.device).unsqueeze(1)
         reward_batch = torch.tensor(rewards, dtype=torch.float32, device=self.device).unsqueeze(1)
         done_batch = torch.tensor(dones, dtype=torch.float32, device=self.device).unsqueeze(1)
-        next_state_batch = torch.stack(next_states).to(self.device)
 
         self.policy_net.reset_noise()
         current_q_values, taus = self.policy_net(state_batch)
         current_q = current_q_values.gather(
             2, action_batch.unsqueeze(1).expand(-1, current_q_values.shape[1], -1)
-        ).squeeze(2)  # (B, n_taus)
+        ).squeeze(2)
 
         self.target_net.reset_noise()
         with torch.no_grad():
@@ -257,7 +262,7 @@ class NeuralAgent:
             ).squeeze(2)
             target_q = (reward_batch + self.gamma * next_q * (1.0 - done_batch)).detach()
 
-        td_errors = target_q.unsqueeze(1) - current_q.unsqueeze(2)  # (B, n_taus, n_taus_target)
+        td_errors = target_q.unsqueeze(1) - current_q.unsqueeze(2)
         huber = F.huber_loss(current_q.unsqueeze(2).expand_as(td_errors),
                              target_q.unsqueeze(1).expand_as(td_errors),
                              reduction="none", delta=1.0)

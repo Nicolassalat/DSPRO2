@@ -1,7 +1,7 @@
 #DolphinEnv.py
 import sys, os, socket, struct, json, random, select
 
-sys.path.insert(0, os.path.join(os.getcwd(), "scripts"))
+sys.path.insert(0, os.path.join(os.getcwd(), "env"))
 sys.path.insert(0, os.getcwd())
 
 from dolphin import event, savestate

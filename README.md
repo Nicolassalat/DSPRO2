@@ -18,7 +18,7 @@ Our work aims to design and evaluate a reinforcement learning agent capable of a
 
 ## Architecture
 
-The agent uses a modular deep reinforcement learning architecture defined in `BTR/`:
+The agent uses a modular deep reinforcement learning architecture defined in `btr/`:
 
 - **IMPALA Encoder** — convolutional network that compresses raw game frames into a compact feature representation
 - **Implicit Quantile Network (IQN)** — distributional RL head that models the full return distribution rather than a single Q-value, improving training stability and sample efficiency
@@ -32,17 +32,21 @@ The agent uses a modular deep reinforcement learning architecture defined in `BT
 DSPRO2/
 ├── btr/                          Neural network modules (encoder, IQN, layers)
 ├── scripts/
-│   ├── training_monitor_1.ipynb  Entry point — starts training and live reward monitoring
-│   ├── start_training.py         Training loop (launched by the notebook)
-│   ├── training_process.py       Main training orchestrator
-│   ├── neural_agent.py           RL agent implementation
-│   ├── dolphin_env.py            Dolphin emulator environment wrapper
-│   ├── dolphin_capture.py        Frame capture from the emulator
-│   ├── reward_function.py        Reward shaping logic
-│   ├── game_memory.py            Game state memory abstraction
-│   ├── actions.py                Action space definition
-│   ├── open_dolphin.py           Emulator launcher
-│   └── setup_emulator.py         First-time emulator setup
+│   ├── training_monitor.ipynb    Entry point — starts training and live reward monitoring
+│   ├── train/
+│   │   ├── start_training.py     Training watchdog and launcher
+│   │   ├── training_process.py   Main training orchestrator
+│   │   └── neural_agent.py       RL agent implementation
+│   ├── env/
+│   │   ├── dolphin_env.py        Dolphin emulator environment (runs inside Dolphin)
+│   │   ├── dolphin_capture.py    Frame capture from the emulator
+│   │   ├── game_memory.py        Game state memory abstraction
+│   │   ├── actions.py            Action space definition
+│   │   └── reward_function.py    Reward shaping logic
+│   └── utils/
+│       ├── setup_emulator.py     First-time emulator setup
+│       ├── open_dolphin.py       Emulator launcher
+│       └── hellodolphin.py       Emulator connectivity test
 ├── save_states/                  Emulator save states per track (used during training)
 ├── save_states_testing/          Emulator save states for evaluation
 ├── runs_backup/                  Archived training runs (weights, TensorBoard logs, notes)

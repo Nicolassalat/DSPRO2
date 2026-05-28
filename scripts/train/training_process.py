@@ -3,14 +3,18 @@ from collections import deque
 import numpy as np
 import socket, struct, json, threading, os, time, random
 
-from dolphin_capture import DolphinCapture
-from reward_function import simple_reward, advanced_reward
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))           # scripts/train/
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # scripts/
+
+from env.dolphin_capture import DolphinCapture
+from env.reward_function import simple_reward, advanced_reward
 from neural_agent import NeuralAgent
 
 HOST       = "127.0.0.1"
 PORT_P1    = 55001
 PORT_P2    = 55002
-READY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "training_ready.txt")
+READY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "training_ready.txt")
 ACTION_NAMES = [
     "accel_center", "accel_left", "accel_right",
     "drift_hard_left", "drift_soft_left", "drift_center", "drift_soft_right", "drift_hard_right",

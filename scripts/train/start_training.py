@@ -2,11 +2,11 @@
 import os, sys, time, re, subprocess, json, threading
 import tkinter as tk
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SCRIPTS_DIR   = os.path.join(PROJECT_ROOT, "scripts")
 ISO_PATH      = os.path.join(PROJECT_ROOT, "game", "mkw.iso")
 DOLPHIN_EXE   = os.path.join(PROJECT_ROOT, "emulator", "Dolphin.exe")
-ENV_SCRIPT    = os.path.join(SCRIPTS_DIR, "dolphin_env.py")
+ENV_SCRIPT    = os.path.join(SCRIPTS_DIR, "env", "dolphin_env.py")
 READY_FILE    = os.path.join(PROJECT_ROOT, "training_ready.txt")
 DOLPHIN_INI   = os.path.join(os.environ["APPDATA"], "Dolphin Emulator", "Config", "Dolphin.ini")
 STATE_FILE    = os.path.join(SCRIPTS_DIR, "training_state.json")
@@ -84,7 +84,7 @@ while True:
 
     print("[StartTraining] Launching TrainingProcess...")
     training_proc = subprocess.Popen(
-        [sys.executable, os.path.join(SCRIPTS_DIR, "training_process.py")],
+        [sys.executable, os.path.join(SCRIPTS_DIR, "train", "training_process.py")],
     )
 
     print("[StartTraining] Waiting for TrainingProcess to be ready...")

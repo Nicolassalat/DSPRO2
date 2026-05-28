@@ -15,7 +15,7 @@ import pickle
 
 import copy
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "btr"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "btr"))
 from networks.btr import BTRNetwork
 
 FRAME_WIDTH = 140
@@ -80,8 +80,8 @@ class NeuralAgent:
 
         self.last_state = {1: None, 2: None}
         self.last_action = {1: None, 2: None}
-        self.model_path = model_path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "agent_model.pth")
-        self.project_root = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+        self.model_path = model_path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "agent_model.pth")
+        self.project_root = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
         self.writer = SummaryWriter(log_dir=os.path.join(self.project_root, "runs"))
         self.load_model()
         self.episode_count = 0

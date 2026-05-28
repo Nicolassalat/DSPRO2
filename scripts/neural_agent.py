@@ -45,7 +45,7 @@ class NeuralAgent:
     def __init__(
         self,
         num_actions: int = NUM_ACTIONS,
-        replay_capacity: int = 35000,
+        replay_capacity: int = 25000,
         batch_size: int = 32,
         gamma: float = 0.99,
         lr: float = 1e-4,

@@ -99,10 +99,10 @@ game/mkw.iso
 
 ```bash
 # uv
-uv run scripts/setup_emulator.py
+uv run scripts/utils/setup_emulator.py
 
 # pip
-python scripts/setup_emulator.py
+python scripts/utils/setup_emulator.py
 ```
 
 ### Step 5 — Activate the environment (pip only)

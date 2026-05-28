@@ -3,8 +3,8 @@ from collections import deque
 import numpy as np
 import socket, struct, json, threading, os, time, random
 
-from DolphinCapture import DolphinCapture
-from RewardFunction import simple_reward, advanced_reward
+from dolphin_capture import DolphinCapture
+from reward_function import simple_reward, advanced_reward
 from neural_agent import NeuralAgent
 
 HOST       = "127.0.0.1"

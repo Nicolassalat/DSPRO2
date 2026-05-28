@@ -30,15 +30,15 @@ The agent uses a modular deep reinforcement learning architecture defined in `BT
 
 ```
 DSPRO2/
-├── BTR/                          Neural network modules (encoder, IQN, layers)
+├── btr/                          Neural network modules (encoder, IQN, layers)
 ├── scripts/
-│   ├── TrainingMonitor_1.ipynb   Entry point — starts training and live reward monitoring
-│   ├── StartTraining.py          Training loop (launched by the notebook)
-│   ├── TrainingProcess.py        Main training orchestrator
+│   ├── training_monitor_1.ipynb  Entry point — starts training and live reward monitoring
+│   ├── start_training.py         Training loop (launched by the notebook)
+│   ├── training_process.py       Main training orchestrator
 │   ├── neural_agent.py           RL agent implementation
-│   ├── DolphinEnv.py             Dolphin emulator environment wrapper
-│   ├── DolphinCapture.py         Frame capture from the emulator
-│   ├── RewardFunction.py         Reward shaping logic
+│   ├── dolphin_env.py            Dolphin emulator environment wrapper
+│   ├── dolphin_capture.py        Frame capture from the emulator
+│   ├── reward_function.py        Reward shaping logic
 │   ├── game_memory.py            Game state memory abstraction
 │   ├── actions.py                Action space definition
 │   ├── open_dolphin.py           Emulator launcher

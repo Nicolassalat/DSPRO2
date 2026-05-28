@@ -15,7 +15,7 @@ import pickle
 
 import copy
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "BTR"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "btr"))
 from networks.btr import BTRNetwork
 
 FRAME_WIDTH = 140

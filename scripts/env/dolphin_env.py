@@ -1,8 +1,12 @@
 #DolphinEnv.py
 import sys, os, socket, struct, json, random, select
 
-sys.path.insert(0, os.path.join(os.getcwd(), "env"))
-sys.path.insert(0, os.getcwd())
+# Derive project root from the emulator path Dolphin always adds to sys.path,
+# so imports work regardless of what cwd is when Dolphin is launched.
+_emulator = next(p for p in sys.path if p.endswith("emulator"))
+_project_root = os.path.dirname(_emulator)
+sys.path.insert(0, os.path.join(_project_root, "scripts", "env"))
+sys.path.insert(0, os.path.join(_project_root, "scripts"))
 
 from dolphin import event, savestate
 from dolphin import gui
@@ -20,8 +24,8 @@ REQUIRED_FINISH_RATE = 0.65
 COMPLETIONS_TO_UNLOCK = 75
 
 
-STATES_BASE = os.path.join(os.getcwd(), "..", "save_states") if os.path.basename(os.getcwd()).lower() == "scripts" else os.path.join(os.getcwd(), "save_states")
-STATE_FILE = os.path.join(os.getcwd(), "training_state.json")
+STATES_BASE = os.path.join(_project_root, "save_states")
+STATE_FILE  = os.path.join(_project_root, "scripts", "training_state.json")
 
 def load_state():
     if os.path.exists(STATE_FILE):

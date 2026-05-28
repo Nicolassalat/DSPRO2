@@ -31,7 +31,6 @@ class Action:
         self.stick_x = stick_x
         
     def to_gc_inputs(self) -> dict:
-        # Convert to the dict format Dolphin expects
         return {
             "A": self.a_button,
             "B": self.b_button,
@@ -54,8 +53,6 @@ class Action:
         }
 
 
-# fmt: off
-# black formatting messes up this table, keeping it manual
 ACTION_TABLE: list[Action] = [
     # Accel + Steer
     Action("accel_center",       a_button=True,  stick_x=STEER_CENTER),     # 0
@@ -89,7 +86,6 @@ ACTION_TABLE: list[Action] = [
     # Do nothing
     Action("nothing"),                                                                  # 14
 ]
-# fmt: on
 
 NUM_ACTIONS = len(ACTION_TABLE)
 

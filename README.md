@@ -37,6 +37,10 @@ DSPRO2/
 │   │   ├── start_training.py     Training watchdog and launcher
 │   │   ├── training_process.py   Main training orchestrator
 │   │   └── neural_agent.py       RL agent implementation
+│   ├── eval/
+│   │   ├── eval_monitor.ipynb    Entry point — runs evaluation and live reward plot
+│   │   ├── start_eval.py         Evaluation launcher (Dolphin + evaluate.py)
+│   │   └── evaluate.py           Greedy eval loop — no learning, prints finish rate
 │   ├── env/
 │   │   ├── dolphin_env.py        Dolphin emulator environment (runs inside Dolphin)
 │   │   ├── dolphin_capture.py    Frame capture from the emulator

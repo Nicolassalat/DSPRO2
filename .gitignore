@@ -20,7 +20,6 @@ training_ready.txt
 
 # TensorBoard logs
 runs/
-runs/**
 
 # training state file
 training_state.json
@@ -28,12 +27,7 @@ scripts/training_state.json
 crash_log.txt
 
 # agent files
-agent_model.pth
-agent_model_buffer.pkl
-
-
 runs_backup/
-runs/
 *.pkl
 *.pth
 

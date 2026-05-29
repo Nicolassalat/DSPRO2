@@ -2,6 +2,7 @@
 import os
 import random
 import shutil
+import tempfile
 import threading
 from collections import deque
 
@@ -131,14 +132,29 @@ class NeuralAgent:
             "optimizer": self.optimizer.state_dict(),
             "steps_done": self.steps_done,
         }
-        torch.save(checkpoint, self.model_path)
+        model_dir = os.path.dirname(self.model_path) or "."
+        fd, tmp_model = tempfile.mkstemp(dir=model_dir, suffix=".pth")
+        os.close(fd)
+        try:
+            torch.save(checkpoint, tmp_model)
+            os.replace(tmp_model, self.model_path)
+        except Exception:
+            os.unlink(tmp_model)
+            raise
 
         # Snapshot the deque under lock before pickling to avoid mutation errors
         with self.lock:
             buffer_snapshot = list(self.replay_buffer.buffer)
         buffer_path = self.model_path.replace(".pth", "_buffer.pkl")
-        with open(buffer_path, "wb") as f:
-            pickle.dump(buffer_snapshot, f)
+        buffer_dir = os.path.dirname(buffer_path) or "."
+        fd, tmp_buf = tempfile.mkstemp(dir=buffer_dir, suffix=".pkl")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                pickle.dump(buffer_snapshot, f)
+            os.replace(tmp_buf, buffer_path)
+        except Exception:
+            os.unlink(tmp_buf)
+            raise
 
     def save_snapshot(self, track: str):
         """Snapshot the full run to runs_backup/run{N}/after_{track}/ in a background thread."""
@@ -275,7 +291,7 @@ class NeuralAgent:
 
         if self.steps_done % 1000 == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
-            threading.Thread(target=self.save_model, daemon=True).start()
+            threading.Thread(target=self.save_model).start()
             try:
                 pynvml.nvmlInit()
                 handle = pynvml.nvmlDeviceGetHandleByIndex(0)

@@ -32,4 +32,8 @@ agent_model.pth
 agent_model_buffer.pkl
 
 
-!runs_backup/**
+runs_backup/
+runs/
+*.pkl
+*.pth
+

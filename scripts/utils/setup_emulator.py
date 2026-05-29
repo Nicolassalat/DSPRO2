@@ -26,10 +26,6 @@ if platform.system() == "Windows":
         z.extractall(emulator_dir)
     os.remove(archive_path)
     print("Done. Dolphin is at emulator/")
-    print("Installing MKW save file...")
-    os.makedirs(os.path.dirname(SAVE_DST), exist_ok=True)
-    shutil.copy(os.path.join(PROJECT_ROOT, "assets", "rksys.dat"), SAVE_DST)
-    print("Done, Dolphin is ready!.")
     print("Downloading game data (save states + assets)...")
     game_data_path = os.path.join(emulator_dir, "game_data.zip")
     urllib.request.urlretrieve(GAME_DATA_URL, game_data_path)
@@ -38,6 +34,10 @@ if platform.system() == "Windows":
         z.extractall(PROJECT_ROOT)
     os.remove(game_data_path)
     print("Done, game data is ready.")
+    print("Installing MKW save file...")
+    os.makedirs(os.path.dirname(SAVE_DST), exist_ok=True)
+    shutil.copy(os.path.join(PROJECT_ROOT, "assets", "rksys.dat"), SAVE_DST)
+    print("Done, setup complete.")
 
 elif platform.system() == "Darwin":
     print("There is no macOS build of Felk's Dolphin. Please build it yourself from the source code.")

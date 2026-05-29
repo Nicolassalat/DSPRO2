@@ -1,6 +1,7 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
+.ipynb_checkpoints/
 build/
 dist/
 wheels/

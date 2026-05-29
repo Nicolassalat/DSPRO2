@@ -53,19 +53,14 @@ TRACK_FOLDERS = {
 }
 
 def get_active_tracks():
-    only_lc = True
-    
-    if only_lc == True:
-        return ["lc"]
+    if track_completions["lc"] < COMPLETIONS_TO_UNLOCK:
+         return ["lc"]
+    elif track_completions["mc"] < COMPLETIONS_TO_UNLOCK:
+        return ["lc", "mc"]
+    elif track_completions["mrw"] < COMPLETIONS_TO_UNLOCK:
+        return ["lc", "mc", "mrw"]
     else:
-        if track_completions["lc"] < COMPLETIONS_TO_UNLOCK:
-            return ["lc"]
-        elif track_completions["mc"] < COMPLETIONS_TO_UNLOCK:
-            return ["lc", "mc"]
-        elif track_completions["mrw"] < COMPLETIONS_TO_UNLOCK:
-            return ["lc", "mc", "mrw"]
-        else:
-            return ["lc", "mc", "mrw", "dc"]
+        return ["lc", "mc", "mrw", "dc"]
 
 
 def get_newest_track():
@@ -109,25 +104,6 @@ def try_recv_action(sock):
 def make_state():
     return {"done": False, "stuck": False, "stuck_steps": 0, "last_completion": 1.0}
 
-"""
-def _draw_overlay(snap1, snap2, s1, s2):
-    mx, my = 10.0, 10.0
-    lh, pad, bw = 20.0, 8.0, 500.0
-    bh = 6 * lh + 2 * pad
-
-    gui.draw_rect_filled((mx, my), (mx + bw, my + bh), 0xCC111111)
-    gui.draw_rect((mx, my), (mx + bw, my + bh), 0x88FFFFFF)
-
-    tx, ty = mx + pad, my + pad
-    for label, snap, s in [("P1", snap1, s1), ("P2", snap2, s2)]:
-        rc = snap["race_completion"]
-        pct = (rc - 1.0) / 3.0 * 100.0
-        gui.draw_text((tx, ty), 0xFF00E5FF, f"{label}  progress: {rc:.2f} ({pct:.1f}%)  stuck: {s['stuck_steps']}/{STUCK_STEPS}")
-        ty += lh
-        gui.draw_text((tx, ty), 0xFFFFFFFF, f"    speed: {snap['speed']:.1f}  offroad: {snap['is_offroad']}  done: {s['done']}  stuck: {s['stuck']}")
-        ty += lh
-"""
-
 last_actions = {0: 0, 1: 0}
 
 SAVE_STATE = pick_save_state()
@@ -140,7 +116,6 @@ initialized = False
 
 print("[DolphinEnv] Imports OK.")
 print("[DolphinEnv] Startup complete, connected to training process.")
-# _last_snap1, _last_snap2 = None, None
 
 @event.on_frameadvance
 def on_frame():
@@ -151,10 +126,6 @@ def on_frame():
         initialized = True
         print(f"[DolphinEnv] Loaded save state: {SAVE_STATE}")
         return
-
-    # For debugging: draw an overlay with progress and status info
-    #if _last_snap1 and _last_snap2:
-    #    _draw_overlay(_last_snap1, _last_snap2, s1, s2)
 
     for act, ctrl_id in [(act1, 0), (act2, 1)]:
         act.apply(last_actions[ctrl_id], ctrl_id)
@@ -218,7 +189,6 @@ def on_frame():
                     print(f"[DolphinEnv] {current_track} mastered! Unlocking next track. finish_rate={finish_rate:.1%}")
 
         save_state()
-        print(f"[DEBUG] DolphinEnv episode count incremented: {episode_count}")
         SAVE_STATE = pick_save_state()
         savestate.load_from_file(SAVE_STATE)
         send_json(sock1, {"reset": True, "stuck": s1["stuck"], "track": current_track, "snapshot": new_track_unlocked})

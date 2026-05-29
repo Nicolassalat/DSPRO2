@@ -52,8 +52,6 @@ DSPRO2/
 │       ├── open_dolphin.py       Emulator launcher
 │       └── hellodolphin.py       Emulator connectivity test
 ├── save_states/                  Emulator save states per track (used during training)
-├── save_states_testing/          Emulator save states for evaluation
-├── runs_backup/                  Archived training runs (weights, TensorBoard logs, notes)
 ├── game/                         Place your ROM here as game/mkw.iso
 └── assets/                       Game data files
 ```
@@ -119,7 +117,7 @@ If you installed via pip, activate the virtual environment before running anythi
 
 ## Running Training
 
-Open `scripts/TrainingMonitor_1.ipynb` in Jupyter and run the cells. The notebook:
+Open `scripts/training_monitor.ipynb` in Jupyter and run the cells. The notebook:
 
 1. Starts TensorBoard in the background — accessible at [http://localhost:6006](http://localhost:6006)
 2. Detects your GPU and warns if none is found

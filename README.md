@@ -97,7 +97,7 @@ Place your Mario Kart Wii ROM at:
 game/mkw.iso
 ```
 
-### Step 4 — Set up the emulator
+### Step 4 — Set up the emulator and download game data
 
 ```bash
 # uv
@@ -106,6 +106,8 @@ uv run scripts/utils/setup_emulator.py
 # pip
 python scripts/utils/setup_emulator.py
 ```
+
+This downloads and installs Dolphin, then downloads the save states and assets from the GitHub release and extracts them to the project root automatically.
 
 ### Step 5 — Activate the environment (pip only)
 

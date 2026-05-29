@@ -12,6 +12,8 @@ wheels/
 
 # Large files
 *.iso
+*.sav
+assets/
 
 # Emulator files
 emulator/

@@ -105,8 +105,9 @@ class NeuralAgent:
                 checkpoint = torch.load(self.model_path, map_location=self.device)
                 self.policy_net.load_state_dict(checkpoint.get("policy_net", self.policy_net.state_dict()))
                 self.optimizer.load_state_dict(checkpoint.get("optimizer", self.optimizer.state_dict()))
-                self.steps_done = checkpoint.get("steps_done", self.steps_done)
-                print(f"[NeuralAgent] Loaded model from {self.model_path}")
+                # Do NOT load steps_done — always start with full epsilon warmup
+                # when loading a pretrained model, so exploration isn't dead on arrival.
+                print(f"[NeuralAgent] Loaded model from {self.model_path} (steps_done reset to 0 for full eps warmup)")
             except Exception as exc:
                 print(f"[NeuralAgent] Failed to load model: {exc}")
 
@@ -187,11 +188,12 @@ class NeuralAgent:
 
         self.steps_done += 1
 
-        eps = max(0.0, 1.0 - self.steps_done / 50000)
+        eps = max(0.0, 1.0 - self.steps_done / 10000)
         if random.random() < eps:
             return random.randrange(self.num_actions)
 
         state = self._frame_to_tensor(frame).to(self.device)
+        self.policy_net.reset_noise()
         with torch.no_grad():
             q_values, _ = self.policy_net(state.unsqueeze(0))
             q_mean = q_values.mean(dim=1)

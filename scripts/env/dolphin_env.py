@@ -21,7 +21,7 @@ STUCK_STEPS  = 225
 STUCK_THRESH = 0.01
 WINDOW_SIZE = 30
 REQUIRED_FINISH_RATE = 0.65
-COMPLETIONS_TO_UNLOCK = 75
+COMPLETIONS_TO_UNLOCK = 30
 
 
 STATES_BASE = os.path.join(_project_root, "save_states")
@@ -53,14 +53,20 @@ TRACK_FOLDERS = {
 }
 
 def get_active_tracks():
-    if track_completions["lc"] < COMPLETIONS_TO_UNLOCK:
+    only_lc = True
+    
+    if only_lc == True:
         return ["lc"]
-    elif track_completions["mc"] < COMPLETIONS_TO_UNLOCK:
-        return ["lc", "mc"]
-    elif track_completions["mrw"] < COMPLETIONS_TO_UNLOCK:
-        return ["lc", "mc", "mrw"]
     else:
-        return ["lc", "mc", "mrw", "dc"]
+        if track_completions["lc"] < COMPLETIONS_TO_UNLOCK:
+            return ["lc"]
+        elif track_completions["mc"] < COMPLETIONS_TO_UNLOCK:
+            return ["lc", "mc"]
+        elif track_completions["mrw"] < COMPLETIONS_TO_UNLOCK:
+            return ["lc", "mc", "mrw"]
+        else:
+            return ["lc", "mc", "mrw", "dc"]
+
 
 def get_newest_track():
     active = get_active_tracks()
